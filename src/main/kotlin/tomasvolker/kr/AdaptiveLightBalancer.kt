@@ -5,7 +5,7 @@ import tomasvolker.numeriko.core.operations.unstack
 import kotlin.math.absoluteValue
 
 
-//fun <T> List<T>.split(times: Int) =
+fun <T> List<T>.split(times: Int = 2) = this.chunked(times)
 
 class AdaptiveLightBalancer(val sectionCount: Int,
                             val maxCount: Int,

@@ -12,7 +12,6 @@ repositories {
     mavenCentral()
     maven { url = uri("https://dl.bintray.com/openrndr/openrndr/") }
     maven { url = uri("http://dl.bintray.com/tomasvolker/maven") }
-    maven { url = uri("https://jitpack.io") }
 }
 
 val openrndrVersion = "0.3.30"

@@ -11,6 +11,7 @@ version = "1.0"
 repositories {
     mavenCentral()
     maven { url = uri("https://dl.bintray.com/openrndr/openrndr/") }
+    maven { url = uri("http://dl.bintray.com/tomasvolker/maven") }
 }
 
 val openrndrVersion = "0.3.30"
@@ -32,6 +33,8 @@ dependencies {
 
     runtime("org.openrndr:openrndr-gl3:$openrndrVersion")
     runtime("org.openrndr:openrndr-gl3-natives-$openrndrOS:$openrndrVersion")
+
+    compile(group = "tomasvolker", name = "numeriko-core", version = "0.0.3")
     
     listOf("boofcv-core","boofcv-swing","boofcv-WebcamCapture","demonstrations").forEach { a ->
         compile(group = "org.boofcv", name = a, version = "0.32")

@@ -28,8 +28,6 @@ dependencies {
     implementation(kotlin("stdlib-jdk8"))
     testCompile("junit", "junit", "4.12")
 
-    implementation(group = "tomasvolker", name = "numeriko-core", version = "0.0.3")
-
     compile("org.openrndr:openrndr-core:$openrndrVersion")
     compile("org.openrndr:openrndr-extensions:$openrndrVersion")
     compile("org.openrndr:openrndr-ffmpeg:$openrndrVersion")

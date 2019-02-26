@@ -11,6 +11,7 @@ version = "1.0"
 repositories {
     mavenCentral()
     maven { url = uri("https://dl.bintray.com/openrndr/openrndr/") }
+    maven { url = uri("http://dl.bintray.com/tomasvolker/maven") }
 }
 
 val openrndrVersion = "0.3.30"
@@ -25,6 +26,8 @@ val openrndrOS = when (OperatingSystem.current()) {
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
     testCompile("junit", "junit", "4.12")
+
+    implementation(group = "tomasvolker", name = "numeriko-core", version = "0.0.3")
 
     compile("org.openrndr:openrndr-core:$openrndrVersion")
     compile("org.openrndr:openrndr-extensions:$openrndrVersion")

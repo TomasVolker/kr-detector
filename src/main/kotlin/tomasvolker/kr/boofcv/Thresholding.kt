@@ -52,6 +52,42 @@ fun <T: ImageGray<T>> T.localMeanThreshold(
         work2
     )
 
+fun <T: ImageGray<T>> T.localOtsuThreshold(
+    size: Size,
+    destination: GrayU8? = null,
+    otsu2: Boolean = false,
+    tuning: Double = 0.0,
+    scale: Double = 1.0,
+    down: Boolean = true
+): GrayU8 =
+    GThresholdImageOps.localOtsu(
+        this,
+        destination,
+        otsu2,
+        size.toConfigLength(),
+        tuning,
+        scale,
+        down
+    )
+
+fun <T: ImageGray<T>> T.localOtsuThreshold(
+    size: Double,
+    destination: GrayU8? = null,
+    otsu2: Boolean = false,
+    tuning: Double = 0.0,
+    scale: Double = 1.0,
+    down: Boolean = true
+): GrayU8 =
+    GThresholdImageOps.localOtsu(
+        this,
+        destination,
+        otsu2,
+        ConfigLength.fixed(size),
+        tuning,
+        scale,
+        down
+    )
+
 sealed class Size
 
 data class Fixed(val pixels: Double): Size()

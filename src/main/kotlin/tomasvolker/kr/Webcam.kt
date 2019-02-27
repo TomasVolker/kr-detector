@@ -6,12 +6,16 @@ import boofcv.struct.image.GrayU8
 import org.openrndr.application
 import org.openrndr.color.ColorRGBa
 import org.openrndr.draw.colorBuffer
+import tomasvolker.kr.algorithms.Point
+import tomasvolker.kr.algorithms.detectQrMarkers
+import tomasvolker.kr.algorithms.reconstruct
 import tomasvolker.kr.boofcv.*
 import tomasvolker.kr.openrndr.write
 import tomasvolker.openrndr.math.extensions.CursorPosition
 import tomasvolker.openrndr.math.extensions.FPSDisplay
 import tomasvolker.openrndr.math.extensions.Grid2D
 import tomasvolker.openrndr.math.extensions.PanZoom
+import tomasvolker.openrndr.math.primitives.d
 import java.awt.image.BufferedImage
 
 fun main() {
@@ -36,6 +40,9 @@ fun main() {
             val work1 = binary.createSameShapeOf<GrayF32>()
             val work2 = binary.createSameShapeOf<GrayF32>()
 
+            val seed = binary.createSameShape()
+            seed[640/2, 480/2] = 1
+
             val result = BufferedImage(imageWidth, imageHeight, BufferedImage.TYPE_INT_ARGB)
 
             backgroundColor = ColorRGBa.WHITE
@@ -46,6 +53,7 @@ fun main() {
             extend(Grid2D())
             extend(CursorPosition())
 
+
             extend {
 
                 val image = webcam.image
@@ -54,15 +62,25 @@ fun main() {
                     .convertToSingle(work0)
                     .localMeanThreshold(
                         60.0,
+                        down = false,
                         destination = binary,
                         work1 = work1,
                         work2 = work2
                     )
 
-                val gray = input.toBufferedImage(destination = result)
 
-                buffer.write(gray)
+                val markers = input.detectQrMarkers()
+
+                val gray = input.toBufferedImage()
+
+                buffer.write(image)
                 drawer.image(buffer)
+
+                drawer.fill = ColorRGBa.RED
+
+                markers.forEach {
+                    drawer.circle(it.x.d, it.y.d, it.unit)
+                }
 
             }
 

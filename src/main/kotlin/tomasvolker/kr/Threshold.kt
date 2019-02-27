@@ -14,8 +14,6 @@ import boofcv.io.image.UtilImageIO
 import boofcv.io.webcamcapture.UtilWebcamCapture
 import java.awt.image.BufferedImage
 
-
-
 fun main() {
 
     val webcam = UtilWebcamCapture.openDefault(640, 480)

@@ -37,7 +37,13 @@ fun ColorBuffer.write(image: DoubleArray2D) {
     for (y in 0 until height) {
         for (x in 0 until width) {
             val value = image[x, y]
-            shadow.write(x, y, value, value, value, 1.0)
+            shadow.write(
+                x = x,
+                y = y,
+                r = value,
+                g = value,
+                b = value,
+                a = 1.0)
         }
     }
     shadow.upload()

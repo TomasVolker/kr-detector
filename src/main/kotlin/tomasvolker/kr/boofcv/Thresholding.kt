@@ -1,9 +1,66 @@
 package tomasvolker.kr.boofcv
 
-import tomasvolker.numeriko.core.interfaces.array2d.double.DoubleArray2D
-import tomasvolker.numeriko.core.interfaces.factory.doubleArray2D
-import tomasvolker.numeriko.core.primitives.indicator
+import boofcv.alg.filter.binary.GThresholdImageOps
+import boofcv.struct.ConfigLength
+import boofcv.struct.image.*
 
-fun DoubleArray2D.threshold(value: Double) =
-        doubleArray2D(shape0, shape1) { i0, i1 -> (this[i0, i1] > value).indicator() }
+fun <T: ImageGray<T>> T.threshold(
+    threshold: Double,
+    destination: GrayU8? = null,
+    down: Boolean = true
+): GrayU8 =
+    GThresholdImageOps.threshold(
+        this,
+        destination,
+        threshold,
+        down
+    ) ?: error("null image")
 
+fun <T: ImageGray<T>> T.localMeanThreshold(
+    size: Double,
+    destination: GrayU8? = null,
+    scale: Double = 1.0,
+    down: Boolean = true,
+    work1: T? = null,
+    work2: T? = null
+): GrayU8 =
+    GThresholdImageOps.localMean(
+        this,
+        destination,
+        ConfigLength.fixed(size),
+        scale,
+        down,
+        work1,
+        work2
+    )
+
+fun <T: ImageGray<T>> T.localMeanThreshold(
+    size: Size,
+    destination: GrayU8? = null,
+    scale: Double = 1.0,
+    down: Boolean = true,
+    work1: T? = null,
+    work2: T? = null
+): GrayU8 =
+    GThresholdImageOps.localMean(
+        this,
+        destination,
+        size.toConfigLength(),
+        scale,
+        down,
+        work1,
+        work2
+    )
+
+sealed class Size
+
+data class Fixed(val pixels: Double): Size()
+data class Relative(
+    val ratio: Double,
+    val minimum: Int
+): Size()
+
+fun Size.toConfigLength() = when(this) {
+    is Fixed -> ConfigLength.fixed(pixels)
+    is Relative -> ConfigLength.relative(ratio, minimum)
+}

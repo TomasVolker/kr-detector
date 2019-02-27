@@ -12,6 +12,7 @@ repositories {
     mavenCentral()
     maven { url = uri("https://dl.bintray.com/openrndr/openrndr/") }
     maven { url = uri("http://dl.bintray.com/tomasvolker/maven") }
+    maven { url = uri("https://jitpack.io") }
 }
 
 val openrndrVersion = "0.3.30"
@@ -26,6 +27,8 @@ val openrndrOS = when (OperatingSystem.current()) {
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
     testCompile("junit", "junit", "4.12")
+
+    implementation("com.github.TomasVolker:openrndr-math:d56f089253")
 
     compile("org.openrndr:openrndr-core:$openrndrVersion")
     compile("org.openrndr:openrndr-extensions:$openrndrVersion")

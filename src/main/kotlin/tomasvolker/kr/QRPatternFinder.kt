@@ -29,7 +29,7 @@ class QRPatternFinder {
         fun findPatterns(lines: GrayscaleImage, tolerance: Double = 0.2): List<QRPattern> =
                 scanImageHorizontal(lines, tolerance).let { horizontal ->
                     horizontal + scanImageVertical(lines, tolerance).filter { !horizontal.contains(it) }
-                }
+                }.map { it.invertAxis() }
 
         private fun scanImageHorizontal(lines: GrayscaleImage, tolerance: Double = 0.2): List<QRPattern> {
             val qrPatternList = mutableListOf<QRPattern>()
@@ -44,7 +44,7 @@ class QRPatternFinder {
                     .toList()
             }
 
-            return qrPatternList.filter { it.unit > 10 }.also { println(it) }
+            return qrPatternList
         }
 
         private fun scanImageVertical(lines: GrayscaleImage, tolerance: Double = 0.2): List<QRPattern> =
@@ -77,8 +77,9 @@ fun main() {
                 val image = webcam.image
                 val input = ConvertBufferedImage.convertFromSingle(image, null, GrayF32::class.java)
 
-                GThresholdImageOps.localMean(input, binary, ConfigLength.fixed(57.0), 1.0, true, null, null)
-//                GThresholdImageOps.blockMinMax(input, binary, ConfigLength.fixed(21.0), 1.0, true, 15.0)
+//                GThresholdImageOps.localMean(input, binary, ConfigLength.fixed(57.0), 1.0, false, null, null)
+//                GThresholdImageOps.blockMinMax(input, binary, ConfigLength.fixed(21.0), 1.0, false, 15.0)
+                GThresholdImageOps.blockOtsu(input, binary, false, ConfigLength.fixed(21.0), 0.5, 1.0, false)
 
                 val qrPatternList = QRPatternFinder.findPatterns(binary.toGrayscaleImage(), tolerance = 0.2)
 

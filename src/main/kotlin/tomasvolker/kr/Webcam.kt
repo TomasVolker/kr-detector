@@ -7,16 +7,21 @@ import org.openrndr.application
 import org.openrndr.color.ColorRGBa
 import org.openrndr.draw.colorBuffer
 import tomasvolker.kr.algorithms.Point
+import tomasvolker.kr.algorithms.QrMarker
 import tomasvolker.kr.algorithms.detectQrMarkers
 import tomasvolker.kr.algorithms.reconstruct
 import tomasvolker.kr.boofcv.*
 import tomasvolker.kr.openrndr.write
+import tomasvolker.numeriko.core.dsl.D
+import tomasvolker.numeriko.core.interfaces.factory.doubleArray1D
+import tomasvolker.numeriko.core.interfaces.factory.nextGaussian
 import tomasvolker.openrndr.math.extensions.CursorPosition
 import tomasvolker.openrndr.math.extensions.FPSDisplay
 import tomasvolker.openrndr.math.extensions.Grid2D
 import tomasvolker.openrndr.math.extensions.PanZoom
 import tomasvolker.openrndr.math.primitives.d
 import java.awt.image.BufferedImage
+import kotlin.random.Random
 
 fun main() {
 
@@ -45,6 +50,14 @@ fun main() {
 
             val result = BufferedImage(imageWidth, imageHeight, BufferedImage.TYPE_INT_ARGB)
 
+            val nClusters = 3
+            val featureExtractor = { marker: QrMarker -> D[marker.x, marker.y] }
+            val kmeans = KMeans<QrMarker>(
+                nClusters = nClusters,
+                featureExtractor = featureExtractor,
+                initCentroids = List(nClusters) { i ->
+                    QrMarker(width / 3 + 50 * i, height / 3 + 50 * i, 10.0) })
+
             backgroundColor = ColorRGBa.WHITE
 
             extend(FPSDisplay())
@@ -71,6 +84,8 @@ fun main() {
 
                 val markers = input.detectQrMarkers()
 
+                kmeans.fit(markers)
+
                 val gray = input.toBufferedImage()
 
                 buffer.write(image)
@@ -78,9 +93,13 @@ fun main() {
 
                 drawer.fill = ColorRGBa.RED
 
-                markers.forEach {
-                    drawer.circle(it.x.d, it.y.d, it.unit)
+                kmeans.centroids.forEach {
+                    drawer.circle(it[0], it[1], 10.0)
                 }
+
+                /*markers.forEach {
+                    drawer.circle(it.x.d, it.y.d, it.unit)
+                }*/
 
             }
 

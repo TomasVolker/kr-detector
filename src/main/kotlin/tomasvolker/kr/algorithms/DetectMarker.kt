@@ -1,14 +1,20 @@
 package tomasvolker.kr.algorithms
 
 import boofcv.struct.image.GrayU8
+import org.ddogleg.nn.FactoryNearestNeighbor
+import org.ddogleg.nn.NnData
+import org.ddogleg.nn.alg.KdTreeDistance
+import tomasvolker.numeriko.core.primitives.squared
+import tomasvolker.openrndr.math.primitives.d
+import java.lang.IndexOutOfBoundsException
 import kotlin.math.absoluteValue
 import kotlin.math.roundToInt
 
 class LinePatternScanner(
     val pattern: DoubleArray,
     val startsWith: Boolean,
-    val tolerance: Double = 0.2,
-    val minSize: Int = 5
+    val tolerance: Double = 0.3,
+    val minSize: Int = 2
 ) {
 
     // If zero, match any
@@ -77,8 +83,6 @@ class LinePatternScanner(
         return 0.0
     }
 
-
-
 }
 
 data class QrMarker(
@@ -87,13 +91,43 @@ data class QrMarker(
     val unit: Double
 )
 
-fun GrayU8.detectQrMarkers(): List<QrMarker> {
+fun GrayU8.detectVerticalQrMarkers(): List<QrMarker> {
 
     val scanner = LinePatternScanner(
         pattern = doubleArrayOf(1.0, 1.0, 3.0, 1.0, 1.0),
         startsWith = false,
-        tolerance = 0.2,
-        minSize = 5
+        tolerance = 0.1,
+        minSize = 10
+    )
+
+    val result = mutableListOf<QrMarker>()
+
+    for (x in 0 until width) {
+
+        scanner.reset()
+
+        for (y in 0 until height) {
+            scanner.nextValue(this[x, y]).let { unit ->
+                if (unit != 0.0) {
+                    result.add(
+                        QrMarker(x, (y - (7 * unit) / 2).roundToInt(), unit)
+                    )
+                }
+            }
+        }
+
+    }
+
+    return result
+}
+
+fun GrayU8.detectHorizontalQrMarkers(): List<QrMarker> {
+
+    val scanner = LinePatternScanner(
+        pattern = doubleArrayOf(1.0, 1.0, 3.0, 1.0, 1.0),
+        startsWith = false,
+        tolerance = 0.5,
+        minSize = 1
     )
 
     val result = mutableListOf<QrMarker>()
@@ -114,21 +148,35 @@ fun GrayU8.detectQrMarkers(): List<QrMarker> {
 
     }
 
-    for (x in 0 until width) {
+    return result
+}
 
-        scanner.reset()
+fun GrayU8.detectQrMarkers(): List<QrMarker> {
 
-        for (y in 0 until height) {
-            scanner.nextValue(this[x, y]).let { unit ->
-                if (unit != 0.0) {
-                    result.add(
-                        QrMarker(x, (y - (7 * unit) / 2).roundToInt(), unit)
-                    )
-                }
+    val horizontal = detectHorizontalQrMarkers()
+    val vertical = detectVerticalQrMarkers()
+
+    val distance = object: KdTreeDistance<Point> {
+        override fun length(): Int = 2
+
+        override fun distance(a: Point, b: Point): Double =
+            ((a.x - b.x).squared() + (a.y - b.y).squared()).d
+
+        override fun valueAt(point: Point, index: Int): Double =
+            when(index) {
+                0 -> point.x.d
+                1 -> point.y.d
+                else -> throw IndexOutOfBoundsException(index)
             }
-        }
 
     }
 
-    return result
+    val nn = FactoryNearestNeighbor.kdtree<Point>(distance)
+
+    nn.setPoints(vertical.map { Point(it.x, it.y) }, true)
+    val result = NnData<Point>()
+
+    return horizontal.filter {
+        nn.findNearest(Point(it.x, it.y), (it.unit).squared(), result)
+    }
 }

@@ -8,6 +8,7 @@ import org.openrndr.color.ColorRGBa
 import org.openrndr.draw.colorBuffer
 import tomasvolker.kr.algorithms.Point
 import tomasvolker.kr.algorithms.detectQrMarkers
+import tomasvolker.kr.algorithms.reconstruct
 import tomasvolker.kr.algorithms.reconstructMarker
 import tomasvolker.kr.boofcv.*
 import tomasvolker.kr.openrndr.write
@@ -16,14 +17,17 @@ import tomasvolker.openrndr.math.extensions.FPSDisplay
 import tomasvolker.openrndr.math.extensions.Grid2D
 import tomasvolker.openrndr.math.extensions.PanZoom
 import tomasvolker.openrndr.math.primitives.d
+import java.awt.image.BufferedImage
+import java.io.File
+import javax.imageio.ImageIO
 import kotlin.math.roundToInt
 
 
 fun main() {
 
-    val webcam = UtilWebcamCapture.openDefault(640, 480)
-    val imageWidth = webcam.viewSize.width
-    val imageHeight = webcam.viewSize.height
+    val image = ImageIO.read(File("test_image.jpg"))
+
+    val marker1 = Point(191, 237)
 
     application {
 
@@ -35,11 +39,7 @@ fun main() {
 
             val buffer = colorBuffer(640, 480)
 
-            val binary = GrayU8(imageWidth, imageHeight)
-
-            val work0 = binary.createSameShapeOf<GrayF32>()
-            val work1 = binary.createSameShapeOf<GrayF32>()
-            val work2 = binary.createSameShapeOf<GrayF32>()
+            val binary = GrayU8(image.width, image.height)
 
             backgroundColor = ColorRGBa.WHITE
 
@@ -52,44 +52,30 @@ fun main() {
 
             extend {
 
-                val image = webcam.image
+                val mousePosition = mouse.position.let {
+                    Point(it.x.roundToInt(), it.y.roundToInt())
+                }
 
                 val input = image
-                    .convertToSingle(work0)
+                    .convertToSingle<GrayU8>()
                     .localMeanThreshold(
                         size = 50.0,
                         scale = 0.95,
                         down = false,
-                        destination = binary,
-                        work1 = work1,
-                        work2 = work2
+                        destination = binary
                     )
 
-                val reconstructed = input.reconstructMarker(mouse.position.let { Point(it.x.roundToInt(), it.y.roundToInt()) })
+                val marker = input.reconstructMarker(mousePosition)
 
-                val verticalMarkers = input.detectQrMarkers()
-                //val horizontalMarkers = input.detectHorizontalQrMarkers()
 
-                buffer.write(reconstructed.toBufferedImage())
+                buffer.write(marker.toBufferedImage())
                 drawer.image(buffer)
 
-                drawer.fill = ColorRGBa.RED
-                verticalMarkers.forEach {
-                    drawer.circle(it.x.d, it.y.d, it.unit)
-                }
-/*
-                drawer.fill = ColorRGBa.BLUE
-                horizontalMarkers.forEach {
-                    drawer.circle(it.x.d, it.y.d, it.unit)
-                }
-*/
             }
 
         }
 
 
     }
-
-    webcam.close()
 
 }

@@ -14,6 +14,7 @@ import tomasvolker.kr.openrndr.write
 import tomasvolker.numeriko.core.interfaces.array2d.double.DoubleArray2D
 import tomasvolker.numeriko.core.interfaces.array2d.generic.forEachIndex
 import tomasvolker.numeriko.core.interfaces.factory.doubleArray2D
+import tomasvolker.openrndr.math.extensions.PanZoom
 
 typealias GrayscaleImage = List<List<Boolean>>
 

@@ -15,18 +15,19 @@ import kotlin.random.Random
 
 typealias FeatureExtractor<T> = (T) -> DoubleArray1D
 
-interface Classifier<R,T> {
-    fun classify(testData: T): R
-}
-
-interface TrainableClassifier<R,T>: Classifier<R,T> {
-    override fun classify(testData: T): R
-    fun fit(trainData: Iterable<T>)
+interface ClusteringAlgorithm<T> {
+    fun cluster(data: Iterable<T>): List<ClusterSet<T>>
     fun step()
 }
 
-fun <T> Iterable<T>.randomElement(random: Random = Random.Default): T =
-        elementAt(random.nextInt() * indexOf(last()))
+data class ClusterSet<T>(
+    val label: Int,
+    val data: Iterable<T>,
+    val centroid: DoubleArray1D
+)
+
+fun <T> List<T>.randomElement(random: Random = Random.Default): T =
+        elementAt((random.nextDouble() * lastIndex).toInt())
 
 fun <T> MutableList<T>.replace(other: List<T>) {
     for (i in 0 until other.size) {
@@ -39,45 +40,42 @@ fun <T> MutableList<T>.replace(other: List<T>) {
 
 class KMeans<T>(val nClusters: Int,
                 val featureExtractor: FeatureExtractor<T>,
-                val initCentroids: List<T>): TrainableClassifier<T,T> {
+                val initCentroids: List<T>?):
+    ClusteringAlgorithm<T> {
 
     val centroids = mutableListOf<DoubleArray1D>().apply {
-        require(initCentroids.size == nClusters) {
-            "Invalid initial centroid configuration"
+        if (initCentroids != null) {
+            require(initCentroids.size == nClusters) {
+                "Invalid initial centroid configuration"
+            }
+            addAll(initCentroids.map(featureExtractor))
         }
-        addAll(initCentroids.map(featureExtractor))
     }
     private val labeledData = mutableListOf<LabeledVector>()
-    private val dataFeaturesList = mutableListOf<Pair<T,DoubleArray1D>>() // TODO: just keep 1 per centroid
+    private val dataFeaturesList = mutableListOf<Pair<T,LabeledVector>>()
     private val randomDataVector = RandomDataVector()
-    private val currCentroids = mutableListOf<DoubleArray1D>()
+    private var currMovement: Double = 100.0
 
-    override fun fit(trainData: Iterable<T>) {
+    fun fit(trainData: Iterable<T>) {
         val vectorData = trainData.map(featureExtractor)
+
+        if (initCentroids == null && centroids.isEmpty()) {
+            centroids.apply {
+                addAll(initCentroidsFromData(vectorData))
+            }
+        }
+
         labeledData.clear()
         labeledData.addAll(List(vectorData.size) { i ->
             LabeledVector(vectorData[i], calculateClosestCentroid(vectorData[i]))
         })
         dataFeaturesList.clear()
-        dataFeaturesList.addAll(List(labeledData.size) { i -> trainData.elementAt(i) to labeledData[i].value })
-        currCentroids.apply { this.addAll(List(centroids.size) { randomDataVector.nextDataVector() }) }
+        dataFeaturesList.addAll(List(labeledData.size) { i -> trainData.elementAt(i) to labeledData[i] })
 
-        quickPlot2D {
-            currCentroids.replace(centroids.toList())
+        while (currMovement > 1E-2) {
+            currMovement = 0.0
             step()
-            fill = ColorRGBa.RED
-            plotScatter(
-                labeledData.map { Vector2(it.value[0], it.value[1]) }
-            )
-            centroids.forEach {
-                rectangle(Rectangle.fromCenter(Vector2(it[0], it[1]), 1.0, 1.0))
-            }
         }
-
-        /*while (centroidDiff(currCentroids) > 1E-2) {
-            currCentroids = centroids.toList()
-            step()
-        }*/
     }
 
     override fun step() {
@@ -87,27 +85,41 @@ class KMeans<T>(val nClusters: Int,
             val dataCluster = labeledData.filter { it.closestCentroid == i }
 
             if (dataCluster.isNotEmpty()) {
-                currCentroids[i] = dataCluster
+                val newCentroid = dataCluster
                     .fold(dataCluster[0].value) { acc, vector -> acc + vector.value } / dataCluster.size
+                currMovement += (newCentroid - centroids[i]).norm2()
+
+                centroids[i] = newCentroid
             } else {
-                currCentroids[i] = randomDataVector.nextDataVector()
-                println("empty centroid: $i")
+                centroids[i] = randomDataVector.nextDataVector()
             }
         }
-
-        centroids.replace(currCentroids)
     }
 
-    // TODO: re write without the linear search
-    override fun classify(testData: T): T =
-        featureExtractor(testData).let { vector ->
-            dataFeaturesList.find {
-                it.second == labeledData.maxBy { (it.value - vector).norm2() }?.value ?: error("model not trained")
-            }?.first ?: error("model not trained")
+    override fun cluster(data: Iterable<T>): List<ClusterSet<T>> {
+        fit(data)
+
+        return List(nClusters) { i ->
+            ClusterSet(
+                label = i,
+                data = dataFeaturesList.filter { it.second.closestCentroid == i }.map { it.first },
+                centroid = centroids[i]
+            )
+        }
+    }
+
+    private fun initCentroidsFromData(data: List<DoubleArray1D>): List<DoubleArray1D> {
+        val list = mutableListOf<DoubleArray1D>()
+
+        while (list.size < nClusters) {
+            val nextCentroid = data.randomElement()
+
+            if (nextCentroid !in list)
+                list.add(nextCentroid)
         }
 
-    fun classify(testData: List<T>): List<T> =
-        testData.map { classify(it) }
+        return list.toList()
+    }
 
     /**
      * Finds the index of the closest centroid without the traversing the
@@ -131,14 +143,6 @@ class KMeans<T>(val nClusters: Int,
         }
 
         return result
-    }
-
-    private fun centroidDiff(oldCentroids: List<DoubleArray1D>): Double =
-            List(centroids.size) { i -> (centroids[i] - oldCentroids[i]).norm2() }.max() ?: error("empty centroids")
-
-    fun clear() {
-        centroids.clear()
-        centroids.addAll(initCentroids.map(featureExtractor))
     }
 
     inner class LabeledVector(val value: DoubleArray1D, var closestCentroid: Int) {
@@ -182,8 +186,14 @@ fun main() {
         nClusters = 4,
         featureExtractor = featureExtractor,
         initCentroids = initCentroids
-    ).also { it.fit(dataSet) }
+    )
+
+    val clusteredData = kmeans.cluster(dataSet)
 
     println("centroids: ${kmeans.centroids.map{it}}")
+    println("dataset 1: ${clusteredData[0].data}")
+    println("dataset 2: ${clusteredData[1].data}")
+    println("dataset 3: ${clusteredData[2].data}")
+    println("dataset 4: ${clusteredData[3].data}")
 
 }

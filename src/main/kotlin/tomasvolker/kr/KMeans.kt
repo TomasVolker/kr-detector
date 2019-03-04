@@ -1,12 +1,22 @@
 package tomasvolker.kr
 
+import org.openrndr.color.ColorRGBa
+import org.openrndr.math.Vector2
+import org.openrndr.math.max
+import org.openrndr.shape.Rectangle
 import tomasvolker.numeriko.core.dsl.D
 import tomasvolker.numeriko.core.functions.norm2
+import tomasvolker.numeriko.core.functions.normalized
+import tomasvolker.numeriko.core.functions.sum
 import tomasvolker.numeriko.core.interfaces.array1d.double.DoubleArray1D
 import tomasvolker.numeriko.core.interfaces.array1d.double.elementWise
 import tomasvolker.numeriko.core.interfaces.factory.doubleArray1D
 import tomasvolker.numeriko.core.interfaces.factory.nextGaussian
+import tomasvolker.openrndr.math.plot.plotLine
+import tomasvolker.openrndr.math.plot.plotScatter
+import tomasvolker.openrndr.math.plot.quickPlot2D
 import java.lang.IllegalArgumentException
+import kotlin.math.absoluteValue
 import kotlin.random.Random
 
 
@@ -25,61 +35,78 @@ interface TrainableClassifier<R,T>: Classifier<R,T> {
 fun <T> Iterable<T>.randomElement(random: Random = Random.Default): T =
         elementAt(random.nextInt() * indexOf(last()))
 
+fun <T> MutableList<T>.replace(other: List<T>) {
+    for (i in 0 until other.size) {
+        when (i) {
+            in 0 until size -> { removeAt(i); add(other[i]) }
+            else -> { add(other[i]) }
+        }
+    }
+}
+
 class KMeans<T>(val nClusters: Int,
                 val featureExtractor: FeatureExtractor<T>,
                 val initCentroids: List<T>): TrainableClassifier<T,T> {
 
     val centroids = mutableListOf<DoubleArray1D>().apply {
-        if (initCentroids.size != nClusters)
-            throw IllegalArgumentException("Invalid initial centroid configuration")
-        else
-            this.addAll(initCentroids.map(featureExtractor)) }
+        require(initCentroids.size == nClusters) {
+            "Invalid initial centroid configuration"
+        }
+        addAll(initCentroids.map(featureExtractor))
+    }
     private val labeledData = mutableListOf<LabeledVector>()
-    private val dataFeaturesList = mutableListOf<Pair<T,DoubleArray1D>>()
+    private val dataFeaturesList = mutableListOf<Pair<T,DoubleArray1D>>() // TODO: just keep 1 per centroid
+    private val randomDataVector = RandomDataVector()
+    private val currCentroids = mutableListOf<DoubleArray1D>()
 
     override fun fit(trainData: Iterable<T>) {
         val vectorData = trainData.map(featureExtractor)
-        var oldCentroids = centroids.toList().shuffled()
         labeledData.clear()
         labeledData.addAll(List(vectorData.size) { i ->
             LabeledVector(vectorData[i], calculateClosestCentroid(vectorData[i]))
         })
         dataFeaturesList.clear()
         dataFeaturesList.addAll(List(labeledData.size) { i -> trainData.elementAt(i) to labeledData[i].value })
+        currCentroids.apply { this.addAll(List(centroids.size) { randomDataVector.nextDataVector() }) }
 
-        while (centroidDiff(oldCentroids).also { println(it) } > 1E-2) {
+        quickPlot2D {
+            currCentroids.replace(centroids.toList())
+            step()
+            fill = ColorRGBa.RED
+            plotScatter(
+                labeledData.map { Vector2(it.value[0], it.value[1]) }
+            )
+            centroids.forEach {
+                rectangle(Rectangle.fromCenter(Vector2(it[0], it[1]), 1.0, 1.0))
+            }
+        }
+
+        /*while (centroidDiff(oldCentroids) > 1E-2) {
             oldCentroids = centroids.toList()
             step()
-            println(centroids)
-        }
+        }*/
     }
 
     override fun step() {
         labeledData.forEach { data -> data.updateClosestCentroid() }
 
         for (i in 0 until centroids.size) {
-            val dataCluster = labeledData.filter { it.closestCentroid == centroids[i] }
+            val dataCluster = labeledData.filter { it.closestCentroid == i }
 
             if (dataCluster.isNotEmpty()) {
                 val centroidNorm = centroids[i].norm2()
-
-                centroids.removeAt(i)
-                centroids.add(i,
-                    dataCluster.fold(dataCluster[0].value)
-                    { acc, vector -> acc + vector.value } / centroidNorm)
+                currCentroids[i] = dataCluster
+                    .fold(dataCluster[0].value) { acc, vector -> acc + vector.value } / centroidNorm
+            } else {
+                currCentroids[i] = randomDataVector.nextDataVector()
+                println("empty centroid: $i")
             }
         }
-        /*centroids.replaceAll { centroid ->
-            labeledData.filter { it.closestCentroid == centroid }
-                .let {
-                    if (it.isNotEmpty())
-                        it.fold(it[0].value) { acc, vector -> acc + vector.value }.elementWise { it / centroid.norm2() }
-                    else
-                        centroid
-                }
-        }*/
+
+        centroids.replace(currCentroids)
     }
 
+    // TODO: re write without the linear search
     override fun classify(testData: T): T =
         featureExtractor(testData).let { vector ->
             dataFeaturesList.find {
@@ -90,8 +117,29 @@ class KMeans<T>(val nClusters: Int,
     fun classify(testData: List<T>): List<T> =
         testData.map { classify(it) }
 
-    private fun calculateClosestCentroid(vector: DoubleArray1D): DoubleArray1D =
-        centroids.minBy { (it - vector).norm2() } ?: error("empty centroids")
+    /**
+     * Finds the index of the closest centroid without the traversing the
+     * centroid list twice (one for max and another for linear search of the
+     * element
+     *
+     * @param vector: data in the feature domain
+     */
+
+    private fun calculateClosestCentroid(vector: DoubleArray1D): Int {
+        require(centroids.isNotEmpty()) { "centroids is not initialized" }
+        var result: Int = -1
+        var maxDistance: Double = -1.0
+
+        for (i in 0 until centroids.size) {
+            val currDistance = (vector - centroids[i]).norm2()
+            if (maxDistance < currDistance) {
+                maxDistance = currDistance
+                result = i
+            }
+        }
+
+        return result
+    }
 
     private fun centroidDiff(oldCentroids: List<DoubleArray1D>): Double =
             List(centroids.size) { i -> (centroids[i] - oldCentroids[i]).norm2() }.max() ?: error("empty centroids")
@@ -101,10 +149,29 @@ class KMeans<T>(val nClusters: Int,
         centroids.addAll(initCentroids.map(featureExtractor))
     }
 
-    inner class LabeledVector(val value: DoubleArray1D, var closestCentroid: DoubleArray1D) {
+    inner class LabeledVector(val value: DoubleArray1D, var closestCentroid: Int) {
         fun updateClosestCentroid() {
             closestCentroid = calculateClosestCentroid(value)
         }
+    }
+
+    inner class RandomDataVector {
+        lateinit var maxVectors: DoubleArray1D
+        lateinit var minVectors: DoubleArray1D
+
+        fun nextDataVector(): DoubleArray1D {
+            if ((!::maxVectors.isInitialized || !::minVectors.isInitialized) && labeledData.isNotEmpty()) {
+                maxVectors = labeledData.map { it.value }.maxBy { it.norm2() } ?: error("labeled data is empty")
+                minVectors = labeledData.map { it.value }.minBy { it.norm2() } ?: error("labeled data is empty")
+            }
+
+            return if (!::maxVectors.isInitialized || !::minVectors.isInitialized)
+                error("Model run before fitting") // TODO: make an Exception later on
+            else {
+                (maxVectors - minVectors).elementWise { it * Random.nextDouble() } + minVectors
+            }
+        }
+
     }
 }
 

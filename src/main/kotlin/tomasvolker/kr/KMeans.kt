@@ -40,7 +40,7 @@ fun <T> MutableList<T>.replace(other: List<T>) {
 
 class KMeans<T>(val nClusters: Int,
                 val featureExtractor: FeatureExtractor<T>,
-                val initCentroids: List<T>?):
+                val initCentroids: List<T>? = null):
     ClusteringAlgorithm<T> {
 
     val centroids = mutableListOf<DoubleArray1D>().apply {
@@ -143,6 +143,13 @@ class KMeans<T>(val nClusters: Int,
         }
 
         return result
+    }
+
+    fun reset(initCentroids: List<T>? = null, data: Iterable<T>) {
+        centroids.apply {
+            clear()
+            addAll(initCentroids?.map(featureExtractor) ?: initCentroidsFromData(data.map(featureExtractor)))
+        }
     }
 
     inner class LabeledVector(val value: DoubleArray1D, var closestCentroid: Int) {

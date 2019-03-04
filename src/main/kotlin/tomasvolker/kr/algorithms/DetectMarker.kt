@@ -85,13 +85,14 @@ class LinePatternScanner(
 
 }
 
-data class QrMarker(
+data class QrPattern(
     val x: Int,
     val y: Int,
-    val unit: Double
+    val unitX: Double,
+    val unitY: Double
 )
 
-fun GrayU8.detectVerticalQrMarkers(): List<QrMarker> {
+fun GrayU8.detectVerticalQrPatterns(): List<QrPattern> {
 
     val scanner = LinePatternScanner(
         pattern = doubleArrayOf(1.0, 1.0, 3.0, 1.0, 1.0),
@@ -100,7 +101,7 @@ fun GrayU8.detectVerticalQrMarkers(): List<QrMarker> {
         minSize = 10
     )
 
-    val result = mutableListOf<QrMarker>()
+    val result = mutableListOf<QrPattern>()
 
     for (x in 0 until width) {
 
@@ -110,7 +111,7 @@ fun GrayU8.detectVerticalQrMarkers(): List<QrMarker> {
             scanner.nextValue(this[x, y]).let { unit ->
                 if (unit != 0.0) {
                     result.add(
-                        QrMarker(x, (y - (7 * unit) / 2).roundToInt(), unit)
+                        QrPattern(x, (y - (7 * unit) / 2).roundToInt(), unit, unit)
                     )
                 }
             }
@@ -121,7 +122,7 @@ fun GrayU8.detectVerticalQrMarkers(): List<QrMarker> {
     return result
 }
 
-fun GrayU8.detectHorizontalQrMarkers(): List<QrMarker> {
+fun GrayU8.detectHorizontalQrPatterns(): List<QrPattern> {
 
     val scanner = LinePatternScanner(
         pattern = doubleArrayOf(1.0, 1.0, 3.0, 1.0, 1.0),
@@ -130,7 +131,7 @@ fun GrayU8.detectHorizontalQrMarkers(): List<QrMarker> {
         minSize = 1
     )
 
-    val result = mutableListOf<QrMarker>()
+    val result = mutableListOf<QrPattern>()
 
     for (y in 0 until height) {
 
@@ -140,7 +141,7 @@ fun GrayU8.detectHorizontalQrMarkers(): List<QrMarker> {
             scanner.nextValue(this[x, y]).let { unit ->
                 if (unit != 0.0) {
                     result.add(
-                        QrMarker((x - (7 * unit) / 2).roundToInt(), y, unit)
+                        QrPattern((x - (7 * unit) / 2).roundToInt(), y, unit, unit)
                     )
                 }
             }
@@ -151,10 +152,10 @@ fun GrayU8.detectHorizontalQrMarkers(): List<QrMarker> {
     return result
 }
 
-fun GrayU8.detectQrMarkers(): List<QrMarker> {
+fun GrayU8.detectQrPatterns(): List<QrPattern> {
 
-    val horizontal = detectHorizontalQrMarkers()
-    val vertical = detectVerticalQrMarkers()
+    val horizontal = detectHorizontalQrPatterns()
+    val vertical = detectVerticalQrPatterns()
 
     val distance = object: KdTreeDistance<Point> {
         override fun length(): Int = 2
@@ -177,6 +178,6 @@ fun GrayU8.detectQrMarkers(): List<QrMarker> {
     val result = NnData<Point>()
 
     return horizontal.filter {
-        nn.findNearest(Point(it.x, it.y), (it.unit).squared(), result)
+        nn.findNearest(Point(it.x, it.y), (it.unitX).squared(), result)
     }
 }

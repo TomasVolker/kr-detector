@@ -3,11 +3,13 @@ package tomasvolker.kr
 import boofcv.io.webcamcapture.UtilWebcamCapture
 import boofcv.struct.image.GrayF32
 import boofcv.struct.image.GrayU8
+import com.github.sarxos.webcam.Webcam
 import org.openrndr.application
 import org.openrndr.color.ColorRGBa
 import org.openrndr.draw.colorBuffer
 import tomasvolker.kr.algorithms.Point
-import tomasvolker.kr.algorithms.detectQrMarkers
+import tomasvolker.kr.algorithms.QrPattern
+import tomasvolker.kr.algorithms.estimateCorners
 import tomasvolker.kr.algorithms.reconstructMarker
 import tomasvolker.kr.boofcv.*
 import tomasvolker.kr.openrndr.write
@@ -25,6 +27,8 @@ fun main() {
     val imageWidth = webcam.viewSize.width
     val imageHeight = webcam.viewSize.height
 
+    println("Webcam opened: $imageWidth x $imageHeight")
+
     application {
 
         configure {
@@ -33,7 +37,7 @@ fun main() {
 
         program {
 
-            val buffer = colorBuffer(640, 480)
+            val buffer = colorBuffer(imageWidth, imageHeight)
 
             val binary = GrayU8(imageWidth, imageHeight)
 
@@ -49,8 +53,9 @@ fun main() {
             extend(Grid2D())
             extend(CursorPosition())
 
-
             extend {
+
+                val mousePosition = mouse.position.let { Point(it.x.roundToInt(), it.y.roundToInt()) }
 
                 val image = webcam.image
 
@@ -65,17 +70,25 @@ fun main() {
                         work2 = work2
                     )
 
-                val reconstructed = input.reconstructMarker(mouse.position.let { Point(it.x.roundToInt(), it.y.roundToInt()) })
+                val reconstructed = input.reconstructMarker(
+                    QrPattern(
+                        x = mousePosition.x,
+                        y = mousePosition.y,
+                        unitX = 10.0,
+                        unitY = 10.0
+                    )
+                )
 
-                val verticalMarkers = input.detectQrMarkers()
-                //val horizontalMarkers = input.detectHorizontalQrMarkers()
-
-                buffer.write(reconstructed.toBufferedImage())
+/*
+                val verticalMarkers = input.detectQrPatterns()
+                //val horizontalMarkers = input.detectHorizontalQrPatterns()
+*/
+                buffer.write(input.toBufferedImage())
                 drawer.image(buffer)
 
                 drawer.fill = ColorRGBa.RED
-                verticalMarkers.forEach {
-                    drawer.circle(it.x.d, it.y.d, it.unit)
+                reconstructed.corners.forEach {
+                    drawer.circle(it.x, it.y, 5.0)
                 }
 /*
                 drawer.fill = ColorRGBa.BLUE

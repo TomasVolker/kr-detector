@@ -2,14 +2,19 @@ package tomasvolker.kr.algorithms
 
 import boofcv.struct.image.GrayU8
 import boofcv.struct.image.ImageBase
-import tomasvolker.kr.boofcv.forEachPixel
-import tomasvolker.kr.boofcv.nonZeroPoints
+import org.openrndr.math.Vector2
+import tomasvolker.openrndr.math.primitives.d
 import java.util.*
 
 data class Point(
     val x: Int,
     val y: Int
 )
+
+fun Point.toVector2() = Vector2(x.d, y.d)
+
+operator fun Point.plus(other: Point) = Point(this.x + other.x, this.y + other.y)
+operator fun Point.minus(other: Point) = Point(this.x - other.x, this.y - other.y)
 
 fun Point.neighboors4() = listOf(
     Point(x-1, y),
@@ -89,15 +94,3 @@ fun GrayU8.reconstruct(
     return result
 }
 
-fun GrayU8.reconstructMarker(
-    seed: Point,
-    neighborhood: (Point)->List<Point> = Point::neighboors4,
-    destination: GrayU8? = null
-): GrayU8 {
-
-    val smallSquare = reconstruct(seed, neighborhood, invertImage = true).nonZeroPoints()
-    val mediumSquare = reconstruct(smallSquare, neighborhood).nonZeroPoints()
-    val outerSquare = reconstruct(mediumSquare, neighborhood, invertImage = true, destination = destination)
-
-    return outerSquare
-}

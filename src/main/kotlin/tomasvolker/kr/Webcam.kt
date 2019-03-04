@@ -54,9 +54,9 @@ fun main() {
             val featureExtractor = { marker: QrMarker -> D[marker.x, marker.y] }
             val kmeans = KMeans<QrMarker>(
                 nClusters = nClusters,
-                featureExtractor = featureExtractor,
-                initCentroids = List(nClusters) { i ->
-                    QrMarker(width / 3 + 50 * i, height / 3 + 50 * i, 10.0) })
+                featureExtractor = featureExtractor
+            )
+            var clusters = emptyList<ClusterSet<QrMarker>>()
 
             backgroundColor = ColorRGBa.WHITE
 
@@ -84,7 +84,10 @@ fun main() {
 
                 val markers = input.detectQrMarkers()
 
-                kmeans.fit(markers)
+                if (markers.isNotEmpty() && markers.size > 8) {
+                    kmeans.reset(data = markers)
+                    clusters = kmeans.cluster(markers)
+                }
 
                 val gray = input.toBufferedImage()
 
@@ -93,8 +96,8 @@ fun main() {
 
                 drawer.fill = ColorRGBa.RED
 
-                kmeans.centroids.forEach {
-                    drawer.circle(it[0], it[1], 10.0)
+                clusters.forEach {
+                    drawer.circle(it.centroid[0], it.centroid[1], 10.0)
                 }
 
                 /*markers.forEach {

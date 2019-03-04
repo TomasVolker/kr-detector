@@ -2,21 +2,14 @@ package tomasvolker.kr
 
 import org.openrndr.color.ColorRGBa
 import org.openrndr.math.Vector2
-import org.openrndr.math.max
 import org.openrndr.shape.Rectangle
 import tomasvolker.numeriko.core.dsl.D
 import tomasvolker.numeriko.core.functions.norm2
-import tomasvolker.numeriko.core.functions.normalized
-import tomasvolker.numeriko.core.functions.sum
 import tomasvolker.numeriko.core.interfaces.array1d.double.DoubleArray1D
 import tomasvolker.numeriko.core.interfaces.array1d.double.elementWise
-import tomasvolker.numeriko.core.interfaces.factory.doubleArray1D
 import tomasvolker.numeriko.core.interfaces.factory.nextGaussian
-import tomasvolker.openrndr.math.plot.plotLine
 import tomasvolker.openrndr.math.plot.plotScatter
 import tomasvolker.openrndr.math.plot.quickPlot2D
-import java.lang.IllegalArgumentException
-import kotlin.math.absoluteValue
 import kotlin.random.Random
 
 
@@ -38,7 +31,7 @@ fun <T> Iterable<T>.randomElement(random: Random = Random.Default): T =
 fun <T> MutableList<T>.replace(other: List<T>) {
     for (i in 0 until other.size) {
         when (i) {
-            in 0 until size -> { removeAt(i); add(other[i]) }
+            in 0 until size -> { removeAt(i); add(i, other[i]) }
             else -> { add(other[i]) }
         }
     }
@@ -81,8 +74,8 @@ class KMeans<T>(val nClusters: Int,
             }
         }
 
-        /*while (centroidDiff(oldCentroids) > 1E-2) {
-            oldCentroids = centroids.toList()
+        /*while (centroidDiff(currCentroids) > 1E-2) {
+            currCentroids = centroids.toList()
             step()
         }*/
     }
@@ -94,9 +87,8 @@ class KMeans<T>(val nClusters: Int,
             val dataCluster = labeledData.filter { it.closestCentroid == i }
 
             if (dataCluster.isNotEmpty()) {
-                val centroidNorm = centroids[i].norm2()
                 currCentroids[i] = dataCluster
-                    .fold(dataCluster[0].value) { acc, vector -> acc + vector.value } / centroidNorm
+                    .fold(dataCluster[0].value) { acc, vector -> acc + vector.value } / dataCluster.size
             } else {
                 currCentroids[i] = randomDataVector.nextDataVector()
                 println("empty centroid: $i")
@@ -127,13 +119,13 @@ class KMeans<T>(val nClusters: Int,
 
     private fun calculateClosestCentroid(vector: DoubleArray1D): Int {
         require(centroids.isNotEmpty()) { "centroids is not initialized" }
-        var result: Int = -1
-        var maxDistance: Double = -1.0
+        var result = -1
+        var minDistance = 100.0
 
         for (i in 0 until centroids.size) {
             val currDistance = (vector - centroids[i]).norm2()
-            if (maxDistance < currDistance) {
-                maxDistance = currDistance
+            if (minDistance > currDistance) {
+                minDistance = currDistance
                 result = i
             }
         }

@@ -121,15 +121,91 @@ fun List<MarkerCorners>.estimateDiagonal(): Pair<MarkerCorners, MarkerCorners> =
             .min() ?: Double.POSITIVE_INFINITY
     } ?: error("impossible state")
 
-fun List<MarkerCorners>.sortMarkers(): List<MarkerCorners> {
+fun List<MarkerCorners>.sortedMarkers(): List<MarkerCorners> {
 
     val (d1, d2) = estimateDiagonal()
 
     val offDiagonal = find { it != d1 && it != d2 } ?: error("list doesn't contain 3 elements")
 
     return if ((offDiagonal.position - d1.position) cross (d2.position - d1.position) > 0.0)
-        listOf(d1, offDiagonal, d2)
+        listOf(offDiagonal, d2, d1)
     else
-        listOf(d2, offDiagonal, d1)
+        listOf(offDiagonal, d1, d2)
 
+}
+
+
+fun List<Vector2>.average(): Vector2 {
+    var x = 0.0
+    var y = 0.0
+    forEach {
+        x += it.x
+        y += it.y
+    }
+    return Vector2(
+        x = x / size,
+        y = y / size
+    )
+}
+
+fun List<MarkerCorners>.sortedCorners(): List<MarkerCorners> {
+
+    val marker0 = this[0]
+    val marker1 = this[1]
+    val marker2 = this[2]
+
+    val line0to1 = marker1.position - marker0.position
+    val line1to2 = marker2.position - marker1.position
+    val line2to0 = marker0.position - marker2.position
+
+    val sortedMarker0 = marker0.corners
+        .map { it - marker0.position } // to local coordinates
+        .partition { line0to1 cross it < 0 } // Vertical split
+        .toList()
+        .flatMap {
+            it.partition { line2to0 cross it < 0 } // Horizontal split
+                .toList()
+                .map { it.average() }
+        }.let {
+            MarkerCorners(
+                position = marker0.position,
+                corners = it.map { it + marker0.position } // to global coordinates
+            )
+        }
+
+    val sortedMarker1 = marker1.corners
+        .map { it - marker1.position } // to local coordinates
+        .partition { line0to1 cross it < 0 } // Vertical split
+        .toList()
+        .flatMap {
+            it.partition { line0to1 dot it < 0 } // Horizontal split
+                .toList()
+                .map { it.average() }
+        }.let {
+            MarkerCorners(
+                position = marker1.position,
+                corners = it.map { it + marker1.position } // to global coordinates
+            )
+        }
+
+    val sortedMarker2 = marker2.corners
+        .map { it - marker2.position } // to local coordinates
+        .partition { line2to0 dot it > 0 } // Horizontal split
+        .toList()
+        .flatMap {
+            it.partition { line2to0 cross it < 0 } // Horizontal split
+                .toList()
+                .map { it.average() }
+        }.let {
+            MarkerCorners(
+                position = marker2.position,
+                corners = it.map { it + marker2.position } // to global coordinates
+            )
+        }
+
+    return listOf(
+        sortedMarker0,
+        sortedMarker1,
+        sortedMarker2
+    )
 }

@@ -8,8 +8,6 @@ import tomasvolker.kr.algorithms.*
 import tomasvolker.kr.boofcv.*
 import tomasvolker.kr.openrndr.write
 import tomasvolker.openrndr.math.extensions.CursorPosition
-import tomasvolker.openrndr.math.extensions.FPSDisplay
-import tomasvolker.openrndr.math.extensions.Grid2D
 import tomasvolker.openrndr.math.extensions.PanZoom
 import java.io.File
 import javax.imageio.ImageIO
@@ -54,8 +52,9 @@ fun main() {
         thresholded.reconstructMarker(it)
     }
 
-    val markers = corners.sortMarkers()
-
+    val markers = corners
+        .sortedMarkers()
+        .sortedCorners()
 
     application {
 
@@ -85,13 +84,6 @@ fun main() {
                 drawer.image(buffer)
 
                 drawer.fill = ColorRGBa.RED
-
-                for (corner in corners) {
-                    corner.corners.forEach {
-                        drawer.circle(it, 5.0)
-                    }
-                }
-
                 drawer.stroke = ColorRGBa.RED
 
                 drawer.fontMap = Resources.defaultFont
@@ -101,6 +93,14 @@ fun main() {
                         text = "$i",
                         position = marker.position
                     )
+
+                    marker.corners.forEachIndexed { j, corner ->
+                        drawer.text(
+                            text = "$j",
+                            position = corner
+                        )
+                    }
+
                 }
 
 

@@ -1,4 +1,4 @@
-package tomasvolker.kr
+package tomasvolker.kr.algorithm
 
 import tomasvolker.numeriko.core.functions.inverse
 import tomasvolker.numeriko.core.functions.matMul

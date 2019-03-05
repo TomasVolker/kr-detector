@@ -3,6 +3,7 @@ package tomasvolker.kr.algorithm
 import boofcv.struct.image.GrayU8
 import boofcv.struct.image.ImageBase
 import tomasvolker.kr.geometry.Point
+import kotlin.math.absoluteValue
 
 val ImageBase<*>.center get() = Point(width / 2, height / 2)
 
@@ -40,3 +41,8 @@ fun <T> List<T>.allPairsSequence(): Sequence<Pair<T, T>> = sequence {
 
 }
 
+fun Int.inTolerance(center: Int, tolerance: Double) =
+    (this > center - center * tolerance) && (this < center + center * tolerance)
+
+fun Int.inRange(center: Int, deviation: Int): Boolean =
+    (this - center).absoluteValue < deviation

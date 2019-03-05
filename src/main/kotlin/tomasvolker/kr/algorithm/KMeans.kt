@@ -1,15 +1,10 @@
-package tomasvolker.kr
+package tomasvolker.kr.algorithm
 
-import org.openrndr.color.ColorRGBa
-import org.openrndr.math.Vector2
-import org.openrndr.shape.Rectangle
 import tomasvolker.numeriko.core.dsl.D
 import tomasvolker.numeriko.core.functions.norm2
 import tomasvolker.numeriko.core.interfaces.array1d.double.DoubleArray1D
 import tomasvolker.numeriko.core.interfaces.array1d.double.elementWise
 import tomasvolker.numeriko.core.interfaces.factory.nextGaussian
-import tomasvolker.openrndr.math.plot.plotScatter
-import tomasvolker.openrndr.math.plot.quickPlot2D
 import kotlin.random.Random
 
 
@@ -52,7 +47,7 @@ class KMeans<T>(val nClusters: Int,
         }
     }
     private val labeledData = mutableListOf<LabeledVector>()
-    private val dataFeaturesList = mutableListOf<Pair<T,LabeledVector>>()
+    private val dataFeaturesList = mutableListOf<Pair<T, LabeledVector>>()
     private val randomDataVector = RandomDataVector()
     private var currMovement: Double = 100.0
 

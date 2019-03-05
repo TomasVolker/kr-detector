@@ -27,12 +27,36 @@ import tomasvolker.openrndr.math.extensions.Grid2D
 import tomasvolker.openrndr.math.extensions.PanZoom
 import tomasvolker.openrndr.math.primitives.d
 import java.awt.image.BufferedImage
+import kotlin.math.absoluteValue
 import kotlin.random.Random
+
+
+fun Double.inRange(center: Double, deviation: Double): Boolean =
+    (this - center).absoluteValue < deviation
+
+fun <T> List<T>.mode(): T {
+    val list = mutableListOf<T>().apply { this.addAll(this@mode) }
+    var mode: T = this[0]
+    var modeCount = 0
+
+    for (i in 0 until size) {
+        val currCount = list.count { it == this[i] }
+
+        if (currCount > modeCount) {
+            modeCount = currCount
+            mode = this[i]
+        }
+
+        list.replace(list.filter { it != this[i] })
+    }
+
+    return mode
+}
 
 fun QrMarker.isNeighbor(other: QrMarker, deviation: Int = 3) =
         x.inRange(other.x, deviation) && y.inRange(other.y, deviation)
 
-fun List<QrMarker>.hasNeighbors(nNeighbors: Int = 5,deviation: Int = 2): List<QrMarker> {
+fun List<QrMarker>.hasNeighbors(nNeighbors: Int = 10,deviation: Int = 4): List<QrMarker> {
     val list = mutableListOf<QrMarker>()
 
     for (i in 0 until size) {
@@ -85,7 +109,7 @@ fun main() {
                 nClusters = nClusters,
                 featureExtractor = featureExtractor
             )
-            var clusters = emptyList<ClusterSet<QrMarker>>()
+            var clusters: List<ClusterSet<QrMarker>> = emptyList()
 
             val transitionMatrix = listOf<DoubleArray1D>(
                 doubleArray1D(6) { 1.0 },
@@ -105,10 +129,10 @@ fun main() {
             val kalmanFilter = KalmanFilter(
                 transitionMatrix = transitionMatrix,
                 processNoiseMatrix = processNoiseMatrix,
-                processNoise = 5.0,
+                processNoise = 20.0,
                 measurementMatrix = doubleIdentity(6),
                 measurementNoiseMatrix = measurementNoiseMatrix,
-                measurementNoise = 0.5
+                measurementNoise = 0.1
             )
 
             backgroundColor = ColorRGBa.WHITE
@@ -144,8 +168,26 @@ fun main() {
                         initCentroids = clusters.map { QrMarker(it.centroid[0].toInt(), it.centroid[1].toInt(), 10.0) }
                     )
                     clusters = kmeans.cluster(markers)
-                    centroids = kalmanFilter.step(clusters.map { it.centroid }.flatten())
-                        .withShape(I[3, 2]).as2D().unstack()
+                    kmeans.reset(
+                        initCentroids = clusters.map { QrMarker(it.centroid[0].toInt(), it.centroid[1].toInt(), 10.0) }
+                    )
+
+                    val filteredData = mutableListOf<QrMarker>()
+                    for (i in 0 until clusters.size) {
+                        if (clusters[i].data.toList().isNotEmpty()) {
+//                            val clusterSize = clusters[i].data.toList().size
+//                            val medianUnit = clusters[i].data.map { it.unit }.sorted()[clusterSize / 2]
+//                            val meanUnit = clusters[i].data.map { it.unit }.average()
+                            val modeUnit = clusters[i].data.map { it.unit }.mode()
+
+                            filteredData.addAll(clusters[i].data.filter { it.unit.inRange(modeUnit, 2.0) })
+                        }
+                    }
+
+                    clusters = kmeans.cluster(filteredData)
+                    /*centroids = kalmanFilter.step(clusters.map { it.centroid }.flatten())
+                        .withShape(I[3, 2]).as2D().unstack()*/
+                    centroids = kmeans.centroids.toList()
                     println(centroids)
                 }
 

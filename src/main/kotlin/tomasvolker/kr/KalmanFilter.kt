@@ -27,7 +27,7 @@ class KalmanFilter(
     val measurementCov: DoubleArray2D = doubleIdentity(estimatedX.size).elementWise { it * measurementNoise }
 
     fun step(measurement: DoubleArray1D): DoubleArray1D {
-        repeat(5) { predict() }
+        predict()
         update(measurement)
         return estimatedX
     }

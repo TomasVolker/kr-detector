@@ -13,8 +13,14 @@ import tomasvolker.kr.algorithms.reconstruct
 import tomasvolker.kr.boofcv.*
 import tomasvolker.kr.openrndr.write
 import tomasvolker.numeriko.core.dsl.D
+import tomasvolker.numeriko.core.dsl.I
+import tomasvolker.numeriko.core.interfaces.array1d.double.DoubleArray1D
 import tomasvolker.numeriko.core.interfaces.factory.doubleArray1D
+import tomasvolker.numeriko.core.interfaces.factory.doubleIdentity
 import tomasvolker.numeriko.core.interfaces.factory.nextGaussian
+import tomasvolker.numeriko.core.operations.concatenate
+import tomasvolker.numeriko.core.operations.stack
+import tomasvolker.numeriko.core.operations.unstack
 import tomasvolker.openrndr.math.extensions.CursorPosition
 import tomasvolker.openrndr.math.extensions.FPSDisplay
 import tomasvolker.openrndr.math.extensions.Grid2D
@@ -23,20 +29,26 @@ import tomasvolker.openrndr.math.primitives.d
 import java.awt.image.BufferedImage
 import kotlin.random.Random
 
-fun QrMarker.isNeighbor(other: QrMarker, tolerance: Double = 0.2) =
-        x.inTolerance(other.x, tolerance) && y.inTolerance(other.y, tolerance)
+fun QrMarker.isNeighbor(other: QrMarker, deviation: Int = 3) =
+        x.inRange(other.x, deviation) && y.inRange(other.y, deviation)
 
-fun List<QrMarker>.hasNeighbors(tolerance: Double = 0.2): List<QrMarker> {
+fun List<QrMarker>.hasNeighbors(nNeighbors: Int = 5,deviation: Int = 2): List<QrMarker> {
     val list = mutableListOf<QrMarker>()
 
     for (i in 0 until size) {
         if (this.mapIndexed { index, qrMarker ->
-                if (index != i) qrMarker.isNeighbor(this[i], tolerance) else false }.count() > 5)
+                if (index != i) qrMarker.isNeighbor(this[i], deviation) else false }.count() > nNeighbors)
             list.add(this[i])
     }
 
     return list.toList()
 }
+
+fun List<QrMarker>.centered() =
+    map { QrMarker(it.x - 2 * it.unit.toInt(), it.y - 2 * it.unit.toInt(), it.unit) }
+
+fun List<DoubleArray1D>.flatten() =
+        reduce { acc, array -> acc.concatenate(array) }
 
 fun main() {
 
@@ -63,7 +75,9 @@ fun main() {
             val seed = binary.createSameShape()
             seed[640/2, 480/2] = 1
 
-            val result = BufferedImage(imageWidth, imageHeight, BufferedImage.TYPE_INT_ARGB)
+//            val result = BufferedImage(imageWidth, imageHeight, BufferedImage.TYPE_INT_ARGB)
+
+            var centroids = emptyList<DoubleArray1D>()
 
             val nClusters = 3
             val featureExtractor = { marker: QrMarker -> D[marker.x, marker.y] }
@@ -72,6 +86,30 @@ fun main() {
                 featureExtractor = featureExtractor
             )
             var clusters = emptyList<ClusterSet<QrMarker>>()
+
+            val transitionMatrix = listOf<DoubleArray1D>(
+                doubleArray1D(6) { 1.0 },
+                doubleArray1D(6) { 1.0 },
+                doubleArray1D(6) { 1.0 },
+                doubleArray1D(6) { i -> if (i < 4) 0.0 else 1.0 },
+                doubleArray1D(6) { i -> if (i < 4) 0.0 else 1.0 },
+                doubleArray1D(6) { i -> if (i < 4) 0.0 else 1.0 }
+            ).stack()
+            val processNoiseMatrix = listOf<DoubleArray1D>(
+                doubleArray1D(6) { i -> if (i < 4) 0.5 else 1.0 }
+            ).stack()
+            val measurementNoiseMatrix = listOf<DoubleArray1D>(
+                doubleArray1D(6) { 1.0 }
+            ).stack()
+
+            val kalmanFilter = KalmanFilter(
+                transitionMatrix = transitionMatrix,
+                processNoiseMatrix = processNoiseMatrix,
+                processNoise = 5.0,
+                measurementMatrix = doubleIdentity(6),
+                measurementNoiseMatrix = measurementNoiseMatrix,
+                measurementNoise = 0.5
+            )
 
             backgroundColor = ColorRGBa.WHITE
 
@@ -97,11 +135,18 @@ fun main() {
                     )
 
 
-                val markers = input.detectQrMarkers().hasNeighbors()
+                val markers = input.detectQrMarkers()
+                    .hasNeighbors()
+                    .centered()
 
                 if (markers.size > 3) {
-                    kmeans.reset(data = markers)
+                    kmeans.reset(
+                        initCentroids = clusters.map { QrMarker(it.centroid[0].toInt(), it.centroid[1].toInt(), 10.0) }
+                    )
                     clusters = kmeans.cluster(markers)
+                    centroids = kalmanFilter.step(clusters.map { it.centroid }.flatten())
+                        .withShape(I[3, 2]).as2D().unstack()
+                    println(centroids)
                 }
 
                 val gray = input.toBufferedImage()
@@ -111,8 +156,8 @@ fun main() {
 
                 drawer.fill = ColorRGBa.RED
 
-                clusters.forEach {
-                    drawer.circle(it.centroid[0], it.centroid[1], 10.0)
+                centroids.forEach {
+                    drawer.circle(it[0], it[1], 10.0)
                 }
 
                 /*markers.forEach {

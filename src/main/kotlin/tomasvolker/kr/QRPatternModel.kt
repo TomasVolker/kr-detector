@@ -1,6 +1,7 @@
 package tomasvolker.kr
 
 import tomasvolker.numeriko.core.dsl.I
+import kotlin.math.absoluteValue
 
 
 data class QRPattern(val x: Int, val y: Int, val unit: Int)
@@ -59,3 +60,6 @@ fun List<Boolean>.sections(): Sequence<LineSection> = sequence {
 
 fun Int.inTolerance(center: Int, tolerance: Double) =
     (this > center - center * tolerance) && (this < center + center * tolerance)
+
+fun Int.inRange(center: Int, deviation: Int): Boolean =
+    (this - center).absoluteValue < deviation

@@ -10,10 +10,15 @@ import boofcv.struct.image.GrayU8
 import org.openrndr.application
 import org.openrndr.color.ColorRGBa
 import org.openrndr.draw.colorBuffer
+import tomasvolker.kr.algorithms.QrMarker
 import tomasvolker.kr.openrndr.write
+import tomasvolker.numeriko.core.dsl.D
 import tomasvolker.numeriko.core.interfaces.array2d.double.DoubleArray2D
 import tomasvolker.numeriko.core.interfaces.array2d.generic.forEachIndex
 import tomasvolker.numeriko.core.interfaces.factory.doubleArray2D
+import tomasvolker.openrndr.math.extensions.CursorPosition
+import tomasvolker.openrndr.math.extensions.FPSDisplay
+import tomasvolker.openrndr.math.extensions.Grid2D
 import tomasvolker.openrndr.math.extensions.PanZoom
 
 typealias GrayscaleImage = List<List<Boolean>>
@@ -71,7 +76,18 @@ fun main() {
             val buffer = colorBuffer(640, 480)
             val binary = GrayU8(webcam.viewSize.width, webcam.viewSize.height)
 
+            val nClusters = 3
+            val featureExtractor = { marker: QRPattern -> D[marker.x, marker.y] }
+            val kmeans = KMeans<QRPattern>(
+                nClusters = nClusters,
+                featureExtractor = featureExtractor
+            )
+            var clusters = emptyList<ClusterSet<QRPattern>>()
+
+            extend(FPSDisplay())
             extend(PanZoom())
+            extend(Grid2D())
+            extend(CursorPosition())
 
             extend {
 
@@ -86,6 +102,11 @@ fun main() {
 
                 val gray = VisualizeBinaryData.renderBinary(binary, false, null)
 
+                if (qrPatternList.size > 3) {
+                    kmeans.reset(data = qrPatternList)
+                    clusters = kmeans.cluster(qrPatternList)
+                }
+
                 buffer.write(gray)
                 drawer.image(buffer)
                 drawer.stroke = ColorRGBa.GREEN
@@ -95,10 +116,14 @@ fun main() {
 
                     fill = ColorRGBa.RED
 
-                    qrPatternList.forEach {
+                    clusters.forEach {
+                        circle(x = it.centroid[0], y = it.centroid[1], radius = 10.0)
+                    }
+
+                    /*qrPatternList.forEach {
                         println(it)
                         circle(x = it.x.toDouble(), y = it.y.toDouble(), radius = it.unit / 2.0)
-                    }
+                    }*/
 
                 }
 

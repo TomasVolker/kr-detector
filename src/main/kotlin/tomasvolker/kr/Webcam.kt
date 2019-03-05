@@ -23,6 +23,21 @@ import tomasvolker.openrndr.math.primitives.d
 import java.awt.image.BufferedImage
 import kotlin.random.Random
 
+fun QrMarker.isNeighbor(other: QrMarker, tolerance: Double = 0.2) =
+        x.inTolerance(other.x, tolerance) && y.inTolerance(other.y, tolerance)
+
+fun List<QrMarker>.hasNeighbors(tolerance: Double = 0.2): List<QrMarker> {
+    val list = mutableListOf<QrMarker>()
+
+    for (i in 0 until size) {
+        if (this.mapIndexed { index, qrMarker ->
+                if (index != i) qrMarker.isNeighbor(this[i], tolerance) else false }.count() > 5)
+            list.add(this[i])
+    }
+
+    return list.toList()
+}
+
 fun main() {
 
     val webcam = UtilWebcamCapture.openDefault(640, 480)
@@ -82,9 +97,9 @@ fun main() {
                     )
 
 
-                val markers = input.detectQrMarkers()
+                val markers = input.detectQrMarkers().hasNeighbors()
 
-                if (markers.isNotEmpty() && markers.size > 8) {
+                if (markers.size > 3) {
                     kmeans.reset(data = markers)
                     clusters = kmeans.cluster(markers)
                 }

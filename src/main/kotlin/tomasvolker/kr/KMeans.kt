@@ -72,9 +72,11 @@ class KMeans<T>(val nClusters: Int,
         dataFeaturesList.clear()
         dataFeaturesList.addAll(List(labeledData.size) { i -> trainData.elementAt(i) to labeledData[i] })
 
-        while (currMovement > 1E-2) {
+        var nIterations = 0
+        while (currMovement > 1E-2 && nIterations < 20) {
             currMovement = 0.0
             step()
+            nIterations++
         }
     }
 
@@ -145,10 +147,11 @@ class KMeans<T>(val nClusters: Int,
         return result
     }
 
-    fun reset(initCentroids: List<T>? = null, data: Iterable<T>) {
+    fun reset(initCentroids: List<T>) {
+        currMovement = 100.0
         centroids.apply {
             clear()
-            addAll(initCentroids?.map(featureExtractor) ?: initCentroidsFromData(data.map(featureExtractor)))
+            addAll(initCentroids.map(featureExtractor))
         }
     }
 

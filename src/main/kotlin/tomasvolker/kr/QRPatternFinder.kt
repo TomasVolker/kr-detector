@@ -76,14 +76,6 @@ fun main() {
             val buffer = colorBuffer(640, 480)
             val binary = GrayU8(webcam.viewSize.width, webcam.viewSize.height)
 
-            val nClusters = 3
-            val featureExtractor = { marker: QRPattern -> D[marker.x, marker.y] }
-            val kmeans = KMeans<QRPattern>(
-                nClusters = nClusters,
-                featureExtractor = featureExtractor
-            )
-            var clusters = emptyList<ClusterSet<QRPattern>>()
-
             extend(FPSDisplay())
             extend(PanZoom())
             extend(Grid2D())
@@ -102,11 +94,6 @@ fun main() {
 
                 val gray = VisualizeBinaryData.renderBinary(binary, false, null)
 
-                if (qrPatternList.size > 3) {
-                    kmeans.reset(data = qrPatternList)
-                    clusters = kmeans.cluster(qrPatternList)
-                }
-
                 buffer.write(gray)
                 drawer.image(buffer)
                 drawer.stroke = ColorRGBa.GREEN
@@ -116,14 +103,10 @@ fun main() {
 
                     fill = ColorRGBa.RED
 
-                    clusters.forEach {
-                        circle(x = it.centroid[0], y = it.centroid[1], radius = 10.0)
-                    }
-
-                    /*qrPatternList.forEach {
+                    qrPatternList.forEach {
                         println(it)
                         circle(x = it.x.toDouble(), y = it.y.toDouble(), radius = it.unit / 2.0)
-                    }*/
+                    }
 
                 }
 

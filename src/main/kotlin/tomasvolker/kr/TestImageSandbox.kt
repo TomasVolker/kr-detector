@@ -4,6 +4,7 @@ import boofcv.struct.image.GrayU8
 import org.openrndr.application
 import org.openrndr.color.ColorRGBa
 import org.openrndr.draw.colorBuffer
+import org.openrndr.math.Vector2
 import tomasvolker.kr.algorithms.*
 import tomasvolker.kr.boofcv.*
 import tomasvolker.kr.openrndr.write
@@ -56,6 +57,16 @@ fun main() {
         .sortedMarkers()
         .sortedCorners()
 
+    val homography = markers.computeHomography()
+
+    val markerSequence = listOf(0.0, 7.0, 18.0, 25.0)
+
+    val localPointList = markerSequence.flatMap { x ->
+        markerSequence.map { y ->
+            Vector2(x, y)
+        }
+    }.map(homography)
+
     application {
 
         configure {
@@ -102,6 +113,17 @@ fun main() {
                     }
 
                 }
+
+                drawer.fill = ColorRGBa.BLUE
+
+                localPointList.forEach {
+                    drawer.circle(
+                        position = it,
+                        radius = 3.0
+                    )
+                }
+
+
 
 
             }

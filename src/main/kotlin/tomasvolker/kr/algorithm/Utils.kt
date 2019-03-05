@@ -46,3 +46,24 @@ fun Int.inTolerance(center: Int, tolerance: Double) =
 
 fun Int.inRange(center: Int, deviation: Int): Boolean =
     (this - center).absoluteValue < deviation
+
+
+inline fun <T> List<T>.minDouble(selector: (T)->Double): Double {
+    var result = Double.MAX_VALUE
+    forEach {
+        val value = selector(it)
+        if (value < result)
+            result = value
+    }
+    return result
+}
+
+inline fun <T> List<T>.maxDouble(selector: (T)->Double): Double {
+    var result = Double.MIN_VALUE
+    forEach {
+        val value = selector(it)
+        if (value > result)
+            result = value
+    }
+    return result
+}

@@ -24,10 +24,15 @@ inline fun <reified T: ImageGray<T>> BufferedImage.convertToSingle(destination: 
 fun BufferedImage.toGrayF32(destination: GrayF32? = null): GrayF32 =
     ConvertBufferedImage.convertFrom(this, destination)
 
-fun GrayU8.toBufferedImage(
+fun GrayU8.toBufferedImageBinary(
     invert: Boolean = false,
     destination: BufferedImage? = null): BufferedImage =
     VisualizeBinaryData.renderBinary(this, invert, destination)
+
+fun GrayU8.toBufferedImage(
+    destination: BufferedImage? = null
+): BufferedImage =
+    ConvertBufferedImage.convertTo(this, destination)
 
 operator fun <T: ImageBase<T>> T.get(x: IntRange, y: IntRange): T =
     subimage(

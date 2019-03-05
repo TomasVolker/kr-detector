@@ -98,8 +98,8 @@ fun GrayU8.detectVerticalQrPatterns(): List<QrPattern> {
     val scanner = LinePatternScanner(
         pattern = doubleArrayOf(1.0, 1.0, 3.0, 1.0, 1.0),
         startsWith = false,
-        tolerance = 0.1,
-        minSize = 10
+        tolerance = 0.5,
+        minSize = 2
     )
 
     val result = mutableListOf<QrPattern>()
@@ -129,7 +129,7 @@ fun GrayU8.detectHorizontalQrPatterns(): List<QrPattern> {
         pattern = doubleArrayOf(1.0, 1.0, 3.0, 1.0, 1.0),
         startsWith = false,
         tolerance = 0.5,
-        minSize = 1
+        minSize = 2
     )
 
     val result = mutableListOf<QrPattern>()
@@ -153,32 +153,31 @@ fun GrayU8.detectHorizontalQrPatterns(): List<QrPattern> {
     return result
 }
 
+fun QrPattern.distanceSquaredTo(other: QrPattern): Int =
+    (other.x - this.x).squared() + (other.y - this.y).squared()
+
 fun GrayU8.detectQrPatterns(): List<QrPattern> {
 
     val horizontal = detectHorizontalQrPatterns()
+    if (horizontal.isEmpty()) return emptyList()
+
     val vertical = detectVerticalQrPatterns()
+    if (vertical.isEmpty()) return emptyList()
 
-    val distance = object: KdTreeDistance<Point> {
-        override fun length(): Int = 2
+    // Kd tree
 
-        override fun distance(a: Point, b: Point): Double =
-            ((a.x - b.x).squared() + (a.y - b.y).squared()).d
-
-        override fun valueAt(point: Point, index: Int): Double =
-            when(index) {
-                0 -> point.x.d
-                1 -> point.y.d
-                else -> throw IndexOutOfBoundsException(index)
-            }
-
-    }
-
-    val nn = FactoryNearestNeighbor.kdtree<Point>(distance)
-
-    nn.setPoints(vertical.map { Point(it.x, it.y) }, true)
-    val result = NnData<Point>()
-
-    return horizontal.filter {
-        nn.findNearest(Point(it.x, it.y), (it.unitX).squared(), result)
-    }
+    return horizontal
+        .asSequence()
+        .map { hPattern ->
+            hPattern to (vertical.minBy { it.distanceSquaredTo(hPattern) } ?: error(""))
+        }
+        .filter { it.first.distanceSquaredTo(it.second) < 7.0.squared() }
+        .map {
+            QrPattern(
+                x = (it.first.x + it.second.x) / 2,
+                y = (it.first.y + it.second.y) / 2,
+                unitX = it.first.unitX,
+                unitY = it.second.unitY
+            )
+        }.toList()
 }

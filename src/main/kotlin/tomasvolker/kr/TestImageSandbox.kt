@@ -24,7 +24,7 @@ fun main() {
 
     val detector = QrDetector(image.width, image.height)
 
-    val homography = detector.detectQr(image)
+    val homography = detector.detectQr(image) ?: error("")
 
     val qrImage = detector.thresholded.buildImageFromHomography(
         homography = homography,
@@ -51,10 +51,10 @@ fun main() {
             val buffer = colorBuffer(640, 480)
             val bufferQr = colorBuffer(qrImage.width, qrImage.height)
 
-            val bufferedImage = detector.thresholded.toBufferedImage()
+            val bufferedImage = detector.thresholded.toBufferedImageBinary()
             buffer.write(bufferedImage)
 
-            bufferQr.write(qrImage.toBufferedImage())
+            bufferQr.write(qrImage.toBufferedImageBinary())
 
             backgroundColor = ColorRGBa.WHITE
 

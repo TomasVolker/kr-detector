@@ -27,6 +27,14 @@ class QrDetector(
     val grayScale = GrayU8(imageWidth, imageHeight)
     val thresholded = GrayU8(imageWidth, imageHeight)
 
+    var recognitions: List<QrPattern> = emptyList()
+
+    var clusters: List<Set<QrPattern>> = emptyList()
+
+    var filteredClusters: List<Set<QrPattern>> = emptyList()
+
+    var recognizedMarkers: List<QrPattern> = emptyList()
+
     var rawMarkers: List<MarkerCorners> = emptyList()
         private set
 
@@ -39,7 +47,7 @@ class QrDetector(
     var homography: Homography = Homography.IDENTITY
         private set
 
-    fun detectQr(image: BufferedImage): Homography {
+    fun detectQr(image: BufferedImage): Homography? {
 
         val thresholded = image
             .convertToSingle<GrayU8>(destination = grayScale)
@@ -50,28 +58,24 @@ class QrDetector(
                 destination = thresholded
             )
 
-        val patternList = listOf(
-            QrPattern(
-                x = 170,
-                y = 355,
-                unitX = 10.0,
-                unitY = 10.0
-            ),
-            QrPattern(
-                x = 193,
-                y = 240,
-                unitX = 10.0,
-                unitY = 10.0
-            ),
-            QrPattern(
-                x = 303,
-                y = 258,
-                unitX = 10.0,
-                unitY = 10.0
-            )
-        )
+        recognitions = thresholded.detectHorizontalQrPatterns() + thresholded.detectVerticalQrPatterns()
 
-        rawMarkers = patternList.map {
+        clusters = recognitions.cluster()
+        filteredClusters = clusters.filter { it.size >= 20 }
+
+        recognizedMarkers = filteredClusters.map {
+                val centroid = it.map { Vector2(it.x.d, it.y.d) }.average()
+                QrPattern(
+                    x = centroid.x.roundToInt(),
+                    y = centroid.y.roundToInt(),
+                    unitX = it.map { it.unitX }.average(),
+                    unitY = it.map { it.unitY }.average()
+                )
+            }
+
+        if (recognizedMarkers.size != 3) return null
+
+        rawMarkers = recognizedMarkers.map {
             thresholded.reconstructMarker(it)
         }
 

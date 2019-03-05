@@ -58,10 +58,10 @@ class QrDetector(
                 destination = thresholded
             )
 
-        recognitions = thresholded.detectHorizontalQrPatterns() + thresholded.detectVerticalQrPatterns()
+        recognitions = QRPatternFinder.findPatterns(thresholded.toGrayscaleImage())
 
-        clusters = recognitions.cluster()
-        filteredClusters = clusters.filter { it.size >= 20 }
+        clusters = recognitions.cluster(distance = 1.5)
+        filteredClusters = clusters.filter { it.size >= 5 }
 
         recognizedMarkers = filteredClusters.map {
                 val centroid = it.map { Vector2(it.x.d, it.y.d) }.average()

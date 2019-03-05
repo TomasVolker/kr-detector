@@ -7,6 +7,7 @@ import boofcv.struct.image.GrayU8
 import org.openrndr.application
 import org.openrndr.color.ColorRGBa
 import org.openrndr.draw.colorBuffer
+import org.openrndr.math.Vector2
 import tomasvolker.kr.boofcv.convertToSingle
 import tomasvolker.kr.boofcv.createSameShapeOf
 import tomasvolker.kr.boofcv.localMeanThreshold
@@ -18,6 +19,7 @@ import tomasvolker.openrndr.math.extensions.CursorPosition
 import tomasvolker.openrndr.math.extensions.FPSDisplay
 import tomasvolker.openrndr.math.extensions.Grid2D
 import tomasvolker.openrndr.math.extensions.PanZoom
+import tomasvolker.openrndr.math.primitives.d
 import kotlin.math.roundToInt
 
 typealias GrayscaleImage = List<List<Boolean>>
@@ -29,43 +31,43 @@ fun GrayscaleImage.transpose() =
         }
     }
 
-class QRPatternFinder {
-    companion object {
-        /*fun findPatterns(lines: GrayscaleImage, tolerance: Double = 0.2): List<QRPattern> =
-            scanImageHorizontal(lines, tolerance).let { horizontal ->
-                horizontal + scanImageVertical(lines, tolerance).filter { !horizontal.contains(it) }
-            }.map { it.invertAxis() }*/
+object QRPatternFinder {
 
-        fun findPatterns(lines: GrayscaleImage, tolerance: Double = 0.2): List<QRPattern> =
-            scanImageHorizontal(lines, tolerance).let { horizontal ->
-                horizontal + scanImageVertical(lines, tolerance)
-            }.map { it.invertAxis() }
+    /*fun findPatterns(lines: GrayscaleImage, tolerance: Double = 0.2): List<QRPattern> =
+        scanImageHorizontal(lines, tolerance).let { horizontal ->
+            horizontal + scanImageVertical(lines, tolerance).filter { !horizontal.contains(it) }
+        }.map { it.invertAxis() }*/
 
-        private fun scanImageHorizontal(lines: GrayscaleImage, tolerance: Double = 0.2): List<QRPattern> {
-            val qrPatternList = mutableListOf<QRPattern>()
+    fun findPatterns(lines: GrayscaleImage, tolerance: Double = 0.2): List<QrPattern> =
+        scanImageHorizontal(lines, tolerance).let { horizontal ->
+            horizontal + scanImageVertical(lines, tolerance)
+        }.map { QrPattern(it.y, it.x, it.unitX, it.unitY) }
 
-            lines.mapIndexed { index, line ->
-                line.toLineSections(axisIndex = index)
-                    .interleaved(overlap = 5)
-                    .map {
-                        if (it.isPattern(tolerance))
-                            qrPatternList.add(QRPattern(it[2].center, index, it[0].unit))
-                    }
-                    .toList()
-            }
+    private fun scanImageHorizontal(lines: GrayscaleImage, tolerance: Double = 0.2): List<QrPattern> {
+        val qrPatternList = mutableListOf<QrPattern>()
 
-            return qrPatternList
+        lines.mapIndexed { index, line ->
+            line.toLineSections(axisIndex = index)
+                .interleaved(overlap = 5)
+                .map {
+                    if (it.isPattern(tolerance))
+                        qrPatternList.add(QrPattern(it[2].center, index, it[0].unit.d, it[0].unit.d))
+                }
+                .toList()
         }
 
-        private fun scanImageVertical(lines: GrayscaleImage, tolerance: Double = 0.2): List<QRPattern> =
-            scanImageHorizontal(lines.transpose(), tolerance).map { it.invertAxis() }
+        return qrPatternList
     }
+
+    private fun scanImageVertical(lines: GrayscaleImage, tolerance: Double = 0.2): List<QrPattern> =
+        scanImageHorizontal(lines.transpose(), tolerance).map { QrPattern(it.y, it.x, it.unitX, it.unitY) }
+
 }
 
 fun GrayU8.toGrayscaleImage(): List<List<Boolean>> =
     List(width) { i -> List(height) { j -> get(i, j) == 1 } }
 
-
+/*
 fun main() {
     val webcam = UtilWebcamCapture.openDefault(640, 480)
     val imageWidth = webcam.viewSize.width
@@ -176,4 +178,4 @@ fun main() {
 
     webcam.close()
 
-}
+}*/

@@ -4,12 +4,12 @@ import tomasvolker.numeriko.core.primitives.squared
 import java.util.*
 
 
-fun QrPattern.connectedTo(other: QrPattern): Boolean =
-    ((this.x - other.x) / unitX).squared() + ((this.y - other.y) / unitY).squared() < 0.6.squared()
+fun QrPattern.connectedTo(other: QrPattern, distance: Double = 1.0): Boolean =
+    ((this.x - other.x) / unitX).squared() + ((this.y - other.y) / unitY).squared() < distance.squared()
 
-fun List<QrPattern>.cluster(): List<Set<QrPattern>> =
+fun List<QrPattern>.cluster(distance: Double = 1.0): List<Set<QrPattern>> =
     connectedComponents(
-        neighbors = { node -> this.filter { node.connectedTo(it) && it.connectedTo(node) } }
+        neighbors = { node -> this.filter { node.connectedTo(it, distance) && it.connectedTo(node, distance) } }
     )
 
 fun <T> Iterable<T>.connectedComponents(

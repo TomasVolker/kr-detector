@@ -1,28 +1,19 @@
-package tomasvolker.kr
+package tomasvolker.kr.algorithm
 
-import boofcv.alg.filter.binary.GThresholdImageOps
 import boofcv.gui.binary.VisualizeBinaryData
-import boofcv.io.image.ConvertBufferedImage
 import boofcv.io.webcamcapture.UtilWebcamCapture
-import boofcv.struct.ConfigLength
 import boofcv.struct.image.GrayF32
 import boofcv.struct.image.GrayU8
 import org.openrndr.application
 import org.openrndr.color.ColorRGBa
 import org.openrndr.draw.colorBuffer
-import tomasvolker.kr.algorithm.*
 import tomasvolker.kr.boofcv.convertToSingle
 import tomasvolker.kr.boofcv.createSameShapeOf
 import tomasvolker.kr.boofcv.localMeanThreshold
 import tomasvolker.kr.geometry.Point
 import tomasvolker.kr.openrndr.write
 import tomasvolker.numeriko.core.dsl.D
-import tomasvolker.numeriko.core.dsl.I
 import tomasvolker.numeriko.core.interfaces.array1d.double.DoubleArray1D
-import tomasvolker.numeriko.core.interfaces.factory.doubleArray1D
-import tomasvolker.numeriko.core.interfaces.factory.doubleIdentity
-import tomasvolker.numeriko.core.operations.stack
-import tomasvolker.numeriko.core.operations.unstack
 import tomasvolker.openrndr.math.extensions.CursorPosition
 import tomasvolker.openrndr.math.extensions.FPSDisplay
 import tomasvolker.openrndr.math.extensions.Grid2D
@@ -47,7 +38,8 @@ class QRPatternFinder {
 
         fun findPatterns(lines: GrayscaleImage, tolerance: Double = 0.2): List<QRPattern> =
             scanImageHorizontal(lines, tolerance).let { horizontal ->
-                horizontal + scanImageVertical(lines, tolerance)}.map { it.invertAxis() }
+                horizontal + scanImageVertical(lines, tolerance)
+            }.map { it.invertAxis() }
 
         private fun scanImageHorizontal(lines: GrayscaleImage, tolerance: Double = 0.2): List<QRPattern> {
             val qrPatternList = mutableListOf<QRPattern>()
@@ -132,13 +124,22 @@ fun main() {
                         work1 = work1,
                         work2 = work2
                     )
-                val markers = QRPatternFinder.findPatterns(binary.toGrayscaleImage(), tolerance = 0.2)
+                val markers = QRPatternFinder.findPatterns(
+                    binary.toGrayscaleImage(),
+                    tolerance = 0.2
+                )
                     .hasNeighbors(nNeighbors = 40, deviation = 15)
 
                 if (markers.size > 3) {
                     kMeans.reset(
                         initCentroids = clusters
-                            .map { QRPattern(it.centroid[0].toInt(), it.centroid[1].toInt(), 10) }
+                            .map {
+                                QRPattern(
+                                    it.centroid[0].toInt(),
+                                    it.centroid[1].toInt(),
+                                    10
+                                )
+                            }
                     )
                     clusters = kMeans.cluster(markers)
                     centroids = clusters.map { it.centroid }

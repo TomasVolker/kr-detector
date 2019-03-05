@@ -1,6 +1,4 @@
-package tomasvolker.kr
-
-import tomasvolker.kr.algorithm.*
+package tomasvolker.kr.algorithm
 
 
 data class QRPattern(val x: Int, val y: Int, val unit: Int)
@@ -13,7 +11,11 @@ fun QRPattern.isSame(other: QRPattern) =
             (other.y - 1 == y || other.y + 1 == y && other.x == x))
 
 fun QRPattern.center(axis: Int = 0) =
-    if (axis == 0) QRPattern(x - 1 * unit, y, unit) else QRPattern(x, y - 1 * unit, unit)
+    if (axis == 0) QRPattern(x - 1 * unit, y, unit) else QRPattern(
+        x,
+        y - 1 * unit,
+        unit
+    )
 
 fun QRPattern.isNeighbor(other: QRPattern, deviation: Int = 3) =
     x.inRange(other.x, deviation) && y.inRange(other.y, deviation)
@@ -65,7 +67,7 @@ fun List<Boolean>.sections(): Sequence<LineSection> = sequence {
 
     forEachIndexed { index, b ->
         if (b != current) {
-            yield(LineSection(current,lastIndex until index))
+            yield(LineSection(current, lastIndex until index))
             lastIndex = index
             current = b
         }

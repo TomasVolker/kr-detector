@@ -3,21 +3,16 @@ package tomasvolker.kr
 import boofcv.io.webcamcapture.UtilWebcamCapture
 import boofcv.struct.image.GrayF32
 import boofcv.struct.image.GrayU8
-import com.github.sarxos.webcam.Webcam
 import org.openrndr.application
 import org.openrndr.color.ColorRGBa
 import org.openrndr.draw.colorBuffer
-import tomasvolker.kr.algorithms.Point
-import tomasvolker.kr.algorithms.QrPattern
-import tomasvolker.kr.algorithms.estimateCorners
-import tomasvolker.kr.algorithms.reconstructMarker
+import tomasvolker.kr.geometry.Point
 import tomasvolker.kr.boofcv.*
 import tomasvolker.kr.openrndr.write
 import tomasvolker.openrndr.math.extensions.CursorPosition
 import tomasvolker.openrndr.math.extensions.FPSDisplay
 import tomasvolker.openrndr.math.extensions.Grid2D
 import tomasvolker.openrndr.math.extensions.PanZoom
-import tomasvolker.openrndr.math.primitives.d
 import kotlin.math.roundToInt
 
 
@@ -55,7 +50,12 @@ fun main() {
 
             extend {
 
-                val mousePosition = mouse.position.let { Point(it.x.roundToInt(), it.y.roundToInt()) }
+                val mousePosition = mouse.position.let {
+                    Point(
+                        it.x.roundToInt(),
+                        it.y.roundToInt()
+                    )
+                }
 
                 val image = webcam.image
 
@@ -69,7 +69,7 @@ fun main() {
                         work1 = work1,
                         work2 = work2
                     )
-
+/*
                 val reconstructed = input.reconstructMarker(
                     QrPattern(
                         x = mousePosition.x,
@@ -78,18 +78,18 @@ fun main() {
                         unitY = 10.0
                     )
                 )
-
+*/
 /*
                 val verticalMarkers = input.detectQrPatterns()
                 //val horizontalMarkers = input.detectHorizontalQrPatterns()
 */
                 buffer.write(input.toBufferedImage())
                 drawer.image(buffer)
-
+/*
                 drawer.fill = ColorRGBa.RED
                 reconstructed.corners.forEach {
                     drawer.circle(it.x, it.y, 5.0)
-                }
+                }*/
 /*
                 drawer.fill = ColorRGBa.BLUE
                 horizontalMarkers.forEach {

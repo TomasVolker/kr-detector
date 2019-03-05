@@ -1,44 +1,8 @@
-package tomasvolker.kr.algorithms
+package tomasvolker.kr.algorithm
 
 import boofcv.struct.image.GrayU8
-import boofcv.struct.image.ImageBase
-import org.openrndr.math.Vector2
-import tomasvolker.openrndr.math.primitives.d
+import tomasvolker.kr.geometry.*
 import java.util.*
-
-data class Point(
-    val x: Int,
-    val y: Int
-)
-
-fun Point.toVector2() = Vector2(x.d, y.d)
-
-operator fun Point.plus(other: Point) = Point(this.x + other.x, this.y + other.y)
-operator fun Point.minus(other: Point) = Point(this.x - other.x, this.y - other.y)
-
-fun Point.neighboors4() = listOf(
-    Point(x-1, y),
-    Point(x, y-1),
-    Point(x+1, y),
-    Point(x, y+1)
-)
-
-fun Point.neighboors8() = listOf(
-    Point(x-1, y-1),
-    Point(x  , y-1),
-    Point(x+1, y-1),
-    Point(x-1, y  ),
-    Point(x+1, y  ),
-    Point(x-1, y+1),
-    Point(x  , y+1),
-    Point(x+1, y+1)
-)
-
-fun ImageBase<*>.isInBounds(point: Point) = isInBounds(point.x, point.y)
-
-operator fun GrayU8.get(point: Point) = this[point.x, point.y]
-operator fun GrayU8.set(point: Point, value: Int) { this[point.x, point.y] = value }
-
 
 fun GrayU8.reconstruct(
     seed: Point,

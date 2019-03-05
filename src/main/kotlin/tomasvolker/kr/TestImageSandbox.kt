@@ -1,15 +1,18 @@
 package tomasvolker.kr
 
-import boofcv.struct.image.GrayU8
 import org.openrndr.application
 import org.openrndr.color.ColorRGBa
 import org.openrndr.draw.colorBuffer
+import org.openrndr.draw.isolated
 import org.openrndr.math.Vector2
-import tomasvolker.kr.algorithms.*
+import tomasvolker.kr.algorithm.*
 import tomasvolker.kr.boofcv.*
+import tomasvolker.kr.geometry.Point
+import tomasvolker.kr.geometry.buildImageFromHomography
 import tomasvolker.kr.openrndr.write
 import tomasvolker.openrndr.math.extensions.CursorPosition
 import tomasvolker.openrndr.math.extensions.PanZoom
+import tomasvolker.openrndr.math.primitives.d
 import java.io.File
 import javax.imageio.ImageIO
 import kotlin.math.roundToInt
@@ -19,53 +22,23 @@ fun main() {
 
     val image = ImageIO.read(File("test_image.jpg"))
 
+    val detector = QrDetector(image.width, image.height)
 
-    val thresholded = image
-        .convertToSingle<GrayU8>()
-        .localMeanThreshold(
-            size = 50.0,
-            scale = 0.95,
-            down = false
-        )
+    val homography = detector.detectQr(image)
 
-    val patternList = listOf(
-        QrPattern(
-            x = 170,
-            y = 355,
-            unitX = 10.0,
-            unitY = 10.0
-        ),
-        QrPattern(
-            x = 193,
-            y = 240,
-            unitX = 10.0,
-            unitY = 10.0
-        ),
-        QrPattern(
-            x = 303,
-            y = 258,
-            unitX = 10.0,
-            unitY = 10.0
-        )
+    val qrImage = detector.thresholded.buildImageFromHomography(
+        homography = homography,
+        width = 25,
+        height = 25,
+        scale = 10.0
     )
 
-    val corners = patternList.map {
-        thresholded.reconstructMarker(it)
-    }
-
-    val markers = corners
-        .sortedMarkers()
-        .sortedCorners()
-
-    val homography = markers.computeHomography()
-
-    val markerSequence = listOf(0.0, 7.0, 18.0, 25.0)
-
-    val localPointList = markerSequence.flatMap { x ->
-        markerSequence.map { y ->
-            Vector2(x, y)
-        }
-    }.map(homography)
+    val homographyLimits = listOf(
+        Vector2(0.0, 0.0),
+        Vector2(25.0, 0.0),
+        Vector2(0.0, 25.0),
+        Vector2(25.0, 25.0)
+    ).map(homography)
 
     application {
 
@@ -76,9 +49,12 @@ fun main() {
         program {
 
             val buffer = colorBuffer(640, 480)
+            val bufferQr = colorBuffer(qrImage.width, qrImage.height)
 
-            val bufferedImage = thresholded.toBufferedImage()
+            val bufferedImage = detector.thresholded.toBufferedImage()
             buffer.write(bufferedImage)
+
+            bufferQr.write(qrImage.toBufferedImage())
 
             backgroundColor = ColorRGBa.WHITE
 
@@ -99,7 +75,7 @@ fun main() {
 
                 drawer.fontMap = Resources.defaultFont
 
-                markers.forEachIndexed { i, marker ->
+                detector.sortedCorners.forEachIndexed { i, marker ->
                     drawer.text(
                         text = "$i",
                         position = marker.position
@@ -114,17 +90,44 @@ fun main() {
 
                 }
 
-                drawer.fill = ColorRGBa.BLUE
+                drawer.isolated {
 
-                localPointList.forEach {
-                    drawer.circle(
-                        position = it,
-                        radius = 3.0
+                    stroke = ColorRGBa.BLUE
+
+                    lineSegment(
+                        homographyLimits[0],
+                        homographyLimits[1]
                     )
+
+                    lineSegment(
+                        homographyLimits[1],
+                        homographyLimits[3]
+                    )
+
+                    lineSegment(
+                        homographyLimits[0],
+                        homographyLimits[2]
+                    )
+
+                    lineSegment(
+                        homographyLimits[2],
+                        homographyLimits[3]
+                    )
+
                 }
 
+                drawer.isolated {
 
+                    translate(x = 640.0, y = 0.0)
 
+                    image(bufferQr)
+
+                    fill = null
+                    stroke = ColorRGBa.BLUE
+
+                    rectangle(Vector2.ZERO, bufferQr.width.d, bufferQr.height.d)
+
+                }
 
             }
 

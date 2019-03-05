@@ -4,7 +4,7 @@ import boofcv.struct.image.GrayF32
 import boofcv.struct.image.GrayF64
 import boofcv.struct.image.GrayU8
 import boofcv.struct.image.ImageBase
-import tomasvolker.kr.algorithms.Point
+import tomasvolker.kr.geometry.Point
 
 inline fun ImageBase<*>.forEachIndex(
     block: (index: Int)->Unit

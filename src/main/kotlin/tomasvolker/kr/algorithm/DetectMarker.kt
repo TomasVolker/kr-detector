@@ -4,6 +4,7 @@ import boofcv.struct.image.GrayU8
 import org.ddogleg.nn.FactoryNearestNeighbor
 import org.ddogleg.nn.NnData
 import org.ddogleg.nn.alg.KdTreeDistance
+import org.openrndr.math.Vector2
 import tomasvolker.kr.geometry.Point
 import tomasvolker.numeriko.core.primitives.squared
 import tomasvolker.openrndr.math.primitives.d
@@ -92,6 +93,8 @@ data class QrPattern(
     val unitX: Double,
     val unitY: Double
 )
+
+val QrPattern.position get() = Vector2(x.d, y.d)
 
 fun GrayU8.detectVerticalQrPatterns(): List<QrPattern> {
 

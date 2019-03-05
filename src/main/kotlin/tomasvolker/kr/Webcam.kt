@@ -9,7 +9,6 @@ import org.openrndr.draw.colorBuffer
 import org.openrndr.math.Vector2
 import tomasvolker.kr.algorithm.*
 import tomasvolker.kr.geometry.Point
-import tomasvolker.kr.boofcv.*
 import tomasvolker.kr.openrndr.write
 import tomasvolker.openrndr.math.extensions.CursorPosition
 import tomasvolker.openrndr.math.extensions.FPSDisplay
@@ -78,8 +77,6 @@ fun main() {
                         drawer.lineLoop(corners)
 
                 }
-
-
 
             }
 

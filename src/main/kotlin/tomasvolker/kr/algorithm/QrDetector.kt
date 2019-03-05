@@ -44,7 +44,7 @@ class QrDetector(
     var sortedCorners: List<MarkerCorners> = emptyList()
         private set
 
-    var homography: Homography = Homography.IDENTITY
+    var homography: Homography? = null
         private set
 
     fun detectQr(image: BufferedImage): Homography? {
@@ -73,7 +73,12 @@ class QrDetector(
                 )
             }
 
-        if (recognizedMarkers.size != 3) return null
+        if (recognizedMarkers.size != 3) {
+            rawMarkers = emptyList()
+            sortedCorners = emptyList()
+            homography = null
+            return null
+        }
 
         rawMarkers = recognizedMarkers.map {
             thresholded.reconstructMarker(it)

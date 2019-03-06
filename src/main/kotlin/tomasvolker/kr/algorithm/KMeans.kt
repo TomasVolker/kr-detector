@@ -34,8 +34,9 @@ fun <T> MutableList<T>.replace(other: List<T>) {
 }
 
 class KMeans<T>(val nClusters: Int,
-                val featureExtractor: FeatureExtractor<T>,
-                val initCentroids: List<T>? = null):
+                val initCentroids: List<T>? = null,
+                val maxIterations: Int = 50,
+                val featureExtractor: FeatureExtractor<T>):
     ClusteringAlgorithm<T> {
 
     val centroids = mutableListOf<DoubleArray1D>().apply {
@@ -68,7 +69,7 @@ class KMeans<T>(val nClusters: Int,
         dataFeaturesList.addAll(List(labeledData.size) { i -> trainData.elementAt(i) to labeledData[i] })
 
         var nIterations = 0
-        while (currMovement > 1E-2 && nIterations < 20) {
+        while (currMovement > 1E-2 && nIterations < maxIterations) {
             currMovement = 0.0
             step()
             nIterations++

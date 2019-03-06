@@ -1,63 +1,49 @@
 package tomasvolker.kr.algorithm
 
-
-data class QRPattern(val x: Int, val y: Int, val unit: Int)
-
-fun QRPattern.invertAxis() = QRPattern(y, x, unit)
-
-fun QRPattern.isSame(other: QRPattern) =
-    (unit == other.unit &&
-            (other.x - 1 == x || other.x + 1 == x && other.y == y) ||
-            (other.y - 1 == y || other.y + 1 == y && other.x == x))
-
-fun QRPattern.center(axis: Int = 0) =
-    if (axis == 0) QRPattern(x - 1 * unit, y, unit) else QRPattern(
-        x,
-        y - 1 * unit,
-        unit
-    )
-
-fun QRPattern.isNeighbor(other: QRPattern, deviation: Int = 3) =
-    x.inRange(other.x, deviation) && y.inRange(other.y, deviation)
-
-fun List<QRPattern>.hasNeighbors(nNeighbors: Int = 3, deviation: Int = 3): List<QRPattern> {
-    val list = mutableListOf<QRPattern>()
-
-    for (i in 0 until size) {
-        if (this.mapIndexed { index, qrMarker ->
-                if (index != i) qrMarker.isNeighbor(this[i], deviation) else false }.count() > nNeighbors)
-            list.add(this[i])
-    }
-
-    return list.toList()
-}
+import java.util.*
 
 data class LineSection(val value: Boolean, val range: IntRange)
-
 val LineSection.unit get() = range.last - range.first
-
 val LineSection.center get() = (range.first + range.last) / 2
 
-fun LineSection.isNeighbor(other: LineSection) =
-    (range.first == other.range.last) || (range.last == other.range.first)
+fun List<LineSection>.isPattern(tolerance: Double): Boolean {
+    if (size != 5) return false
 
-fun List<LineSection>.isPattern(tolerance: Double) =
-    !this[0].value && this[1].unit.inTolerance(this[0].unit, tolerance)
-            && this[3].unit.inTolerance(this[0].unit, tolerance)
-            && this[4].unit.inTolerance(this[0].unit, tolerance)
-            && this[2].unit.inTolerance(this[0].unit * 3, tolerance)
+    val unit = this[0].unit
 
+    return !this[0].value &&
+            this[1].unit.inTolerance(unit, tolerance) &&
+            this[2].unit.inTolerance(3 * unit, tolerance) &&
+            this[3].unit.inTolerance(unit, tolerance) &&
+            this[4].unit.inTolerance(unit, tolerance)
+}
 
-fun List<Boolean>.toLineSections(axisIndex: Int = 0): List<LineSection> =
-    this[0].let {
-        this.toList()
-            .sections()
-            .toList()
+fun <T> List<T>.interleaved(length: Int): Sequence<List<T>> = sequence {
+    for (i in 0 until size - length) {
+        yield(subList(i, i + length))
+    }
+}
+
+fun <T> Sequence<T>.interleaved(length: Int): Sequence<List<T>> = sequence {
+    val input = this@interleaved.iterator()
+
+    val state = ArrayDeque<T>()
+
+    repeat(length) {
+
+        if (input.hasNext())
+            state.addLast(input.next())
+        else
+            return@sequence
+
     }
 
-fun <T> List<T>.interleaved(overlap: Int): Sequence<List<T>> = sequence {
-    for (i in 0 until size - overlap) {
-        yield(subList(i, i + overlap))
+    yield(state.toList())
+
+    while (input.hasNext()) {
+        state.pop()
+        state.addLast(input.next())
+        yield(state.toList())
     }
 }
 
@@ -72,4 +58,27 @@ fun List<Boolean>.sections(): Sequence<LineSection> = sequence {
             current = b
         }
     }
+}
+
+fun Sequence<Boolean>.sections(): Sequence<LineSection> = sequence {
+    val input = this@sections.iterator()
+
+    if (!input.hasNext()) return@sequence
+
+    var current = input.next()
+    var lastIndex = 0
+    var currentIndex = 0
+
+    while (input.hasNext()) {
+        val next = input.next()
+        currentIndex++
+
+        if (next != current) {
+            yield(LineSection(current, lastIndex until currentIndex))
+            lastIndex = currentIndex
+            current = next
+        }
+
+    }
+
 }

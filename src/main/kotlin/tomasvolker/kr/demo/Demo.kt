@@ -8,6 +8,7 @@ import org.openrndr.draw.Drawer
 import org.openrndr.draw.colorBuffer
 import org.openrndr.math.Vector2
 import tomasvolker.kr.algorithm.QrDetector
+import tomasvolker.kr.algorithm.QrPattern
 import tomasvolker.kr.algorithm.position
 import tomasvolker.kr.boofcv.toBufferedImage
 import tomasvolker.kr.boofcv.toBufferedImageBinary
@@ -20,6 +21,16 @@ import tomasvolker.openrndr.math.extensions.FPSDisplay
 import tomasvolker.openrndr.math.extensions.PanZoom
 import tomasvolker.openrndr.math.primitives.d
 import java.awt.image.BufferedImage
+
+fun main() = application(
+    configuration = configuration {
+        title = "KR Detector"
+        width = 640
+        height = 480
+        windowResizable = true
+    },
+    program = DemoProgram()
+)
 
 class DemoProgram: Program() {
 
@@ -156,12 +167,16 @@ class DemoProgram: Program() {
     fun Drawer.drawDetections() {
         imageBinary(detector.thresholded)
 
-        fill = ColorRGBa.RED
-
         detector.recognitions.forEach {
+
+            fill = if (it.direction == QrPattern.Direction.HORIZONTAL)
+                ColorRGBa.RED
+            else
+                ColorRGBa.BLUE
+
             circle(
                 it.position,
-                it.unitX
+                it.unit
             )
         }
 
@@ -269,12 +284,3 @@ class DemoProgram: Program() {
 
 }
 
-fun main() = application(
-    configuration = configuration {
-        title = "KR Detector"
-        width = 640
-        height = 480
-        windowResizable = true
-    },
-    program = DemoProgram()
-)

@@ -5,7 +5,7 @@ import java.util.*
 
 
 fun QrPattern.connectedTo(other: QrPattern, distance: Double = 1.0): Boolean =
-    ((this.x - other.x) / unitX).squared() + ((this.y - other.y) / unitY).squared() < distance.squared()
+    ((this.x - other.x) / unit).squared() + ((this.y - other.y) / unit).squared() < distance.squared()
 
 fun List<QrPattern>.cluster(distance: Double = 1.0): List<Set<QrPattern>> =
     connectedComponents(
@@ -44,6 +44,7 @@ fun <T> connectedComponent(
 ): Set<T> {
 
     val visited = mutableSetOf<T>()
+    visited.add(node)
 
     val queue = ArrayDeque<T>()
     queue.add(node)
@@ -52,7 +53,7 @@ fun <T> connectedComponent(
 
         val current = queue.pop()
 
-        val newNodes = neighbors(current).filter { it !in visited }
+        val newNodes = neighbors(current).filter { (it !in visited) }
 
         for(neighbor in newNodes) {
 

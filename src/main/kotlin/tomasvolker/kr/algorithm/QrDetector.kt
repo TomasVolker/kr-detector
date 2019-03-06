@@ -17,6 +17,7 @@ import tomasvolker.numeriko.core.operations.stack
 import tomasvolker.numeriko.core.primitives.squared
 import tomasvolker.openrndr.math.primitives.d
 import java.awt.image.BufferedImage
+import kotlin.math.max
 import kotlin.math.roundToInt
 
 class QrDetector(
@@ -47,6 +48,9 @@ class QrDetector(
     var homography: Homography? = null
         private set
 
+    val VERTICAL = QrPattern.Direction.VERTICAL
+    val HORIZONTAL = QrPattern.Direction.HORIZONTAL
+
     fun detectQr(image: BufferedImage): Homography? {
 
         val thresholded = image
@@ -58,23 +62,41 @@ class QrDetector(
                 destination = thresholded
             )
 
-        recognitions = QRPatternFinder.findPatterns(thresholded.toGrayscaleImage())
+        recognitions = thresholded.scanForQrPattern(tolerance = 0.4)
 
-        clusters = recognitions.cluster(distance = 1.5)
-        filteredClusters = clusters.filter { it.size >= 5 }
+        clusters = recognitions.cluster(distance = 1.0)
+        filteredClusters = clusters
+            .filter {
+                it.size >= 15 &&
+                it.count { it.direction == VERTICAL }.inTolerance(it.count { it.direction == HORIZONTAL }, 0.5)
+            }
 
         recognizedMarkers = filteredClusters.map {
                 val centroid = it.map { Vector2(it.x.d, it.y.d) }.average()
+
+                val horizontalUnit = it
+                    .asSequence()
+                    .filter { it.direction == HORIZONTAL }
+                    .map { it.unit }
+                    .average()
+
+                val verticalUnit = it
+                    .asSequence()
+                    .filter { it.direction == VERTICAL }
+                    .map { it.unit }
+                    .average()
+
                 QrPattern(
                     x = centroid.x.roundToInt(),
                     y = centroid.y.roundToInt(),
-                    unitX = it.map { it.unitX }.average(),
-                    unitY = it.map { it.unitY }.average()
+                    unit = max(horizontalUnit, verticalUnit),
+                    direction = QrPattern.Direction.HORIZONTAL
                 )
             }
 
         if (recognizedMarkers.size != 3) {
             rawMarkers = emptyList()
+            sortedMarkers = emptyList()
             sortedCorners = emptyList()
             homography = null
             return null
@@ -97,8 +119,8 @@ class QrDetector(
         destination: GrayU8? = null
     ): MarkerCorners {
 
-        val rangeX = rangeAround(pattern.x, (10 * pattern.unitX).roundToInt())
-        val rangeY = rangeAround(pattern.y, (10 * pattern.unitY).roundToInt())
+        val rangeX = rangeAround(pattern.x, (10 * pattern.unit).roundToInt())
+        val rangeY = rangeAround(pattern.y, (10 * pattern.unit).roundToInt())
 
         val topLeft = Vector2(rangeX.first.d, rangeY.first.d)
 

@@ -1,14 +1,9 @@
 package tomasvolker.kr.algorithm
 
 import boofcv.struct.image.GrayU8
-import org.ddogleg.nn.FactoryNearestNeighbor
-import org.ddogleg.nn.NnData
-import org.ddogleg.nn.alg.KdTreeDistance
 import org.openrndr.math.Vector2
-import tomasvolker.kr.geometry.Point
 import tomasvolker.numeriko.core.primitives.squared
 import tomasvolker.openrndr.math.primitives.d
-import java.lang.IndexOutOfBoundsException
 import kotlin.math.absoluteValue
 import kotlin.math.roundToInt
 
@@ -87,13 +82,6 @@ class LinePatternScanner(
 
 }
 
-data class QrPattern(
-    val x: Int,
-    val y: Int,
-    val unitX: Double,
-    val unitY: Double
-)
-
 val QrPattern.position get() = Vector2(x.d, y.d)
 
 fun GrayU8.detectVerticalQrPatterns(): List<QrPattern> {
@@ -115,7 +103,7 @@ fun GrayU8.detectVerticalQrPatterns(): List<QrPattern> {
             scanner.nextValue(this[x, y]).let { unit ->
                 if (unit != 0.0) {
                     result.add(
-                        QrPattern(x, (y - (7 * unit) / 2).roundToInt(), unit, unit)
+                        QrPattern(x, (y - (7 * unit) / 2).roundToInt(), unit, QrPattern.Direction.VERTICAL)
                     )
                 }
             }
@@ -145,7 +133,7 @@ fun GrayU8.detectHorizontalQrPatterns(): List<QrPattern> {
             scanner.nextValue(this[x, y]).let { unit ->
                 if (unit != 0.0) {
                     result.add(
-                        QrPattern((x - (7 * unit) / 2).roundToInt(), y, unit, unit)
+                        QrPattern((x - (7 * unit) / 2).roundToInt(), y, unit, QrPattern.Direction.HORIZONTAL)
                     )
                 }
             }
@@ -179,8 +167,8 @@ fun GrayU8.detectQrPatterns(): List<QrPattern> {
             QrPattern(
                 x = (it.first.x + it.second.x) / 2,
                 y = (it.first.y + it.second.y) / 2,
-                unitX = it.first.unitX,
-                unitY = it.second.unitY
+                unit = it.first.unit,
+                direction = QrPattern.Direction.HORIZONTAL
             )
         }.toList()
 }

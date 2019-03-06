@@ -5,6 +5,7 @@ import boofcv.struct.image.ImageBase
 import tomasvolker.kr.geometry.Point
 import tomasvolker.numeriko.core.interfaces.array1d.double.DoubleArray1D
 import tomasvolker.numeriko.core.operations.concatenate
+import tomasvolker.openrndr.math.primitives.d
 import kotlin.math.absoluteValue
 
 val ImageBase<*>.center get() = Point(width / 2, height / 2)
@@ -44,7 +45,7 @@ fun <T> List<T>.allPairsSequence(): Sequence<Pair<T, T>> = sequence {
 }
 
 fun Int.inTolerance(center: Int, tolerance: Double) =
-    (this > center - center * tolerance) && (this < center + center * tolerance)
+    this.d in center * (1 - tolerance) .. center * (1 + tolerance)
 
 fun Int.inRange(center: Int, deviation: Int): Boolean =
     (this - center).absoluteValue < deviation
@@ -69,46 +70,3 @@ inline fun <T> List<T>.maxDouble(selector: (T)->Double): Double {
     }
     return result
 }
-
-fun Double.inRange(center: Double, deviation: Double): Boolean =
-    (this - center).absoluteValue < deviation
-
-fun <T> List<T>.mode(): T {
-    val list = mutableListOf<T>().apply { this.addAll(this@mode) }
-    var mode: T = this[0]
-    var modeCount = 0
-
-    for (i in 0 until size) {
-        val currCount = list.count { it == this[i] }
-
-        if (currCount > modeCount) {
-            modeCount = currCount
-            mode = this[i]
-        }
-
-        list.replace(list.filter { it != this[i] })
-    }
-
-    return mode
-}
-
-fun QrPattern.isNeighbor(other: QrPattern, deviation: Int = 3) =
-    x.inRange(other.x, deviation) && y.inRange(other.y, deviation)
-
-fun List<QrPattern>.hasNeighbors(nNeighbors: Int = 10,deviation: Int = 4): List<QrPattern> {
-    val list = mutableListOf<QrPattern>()
-
-    for (i in 0 until size) {
-        if (this.mapIndexed { index, qrMarker ->
-                if (index != i) qrMarker.isNeighbor(this[i], deviation) else false }.count() > nNeighbors)
-            list.add(this[i])
-    }
-
-    return list.toList()
-}
-
-fun List<QrPattern>.centered() =
-    map { QrPattern(it.x - 2 * it.unitX.toInt(), it.y - 2 * it.unitY.toInt(), it.unitX, it.unitY) }
-
-fun List<DoubleArray1D>.flatten() =
-    reduce { acc, array -> acc.concatenate(array) }

@@ -18,7 +18,21 @@ fun ColorBuffer.write(image: BufferedImage) {
 
     for (y in 0 until height) {
         for (x in 0 until width) {
-            shadow[x, y] = ColorRGBa.fromHex(image.getRGB(x, y))
+            val color = image.getRGB(x, y)
+
+            val alpha = (color and 0x00FFFFFF.inv()) shr 24
+            val red = (color and 0x00FF0000) shr 16
+            val green = (color and 0x0000FF00) shr 8
+            val blue = (color and 0x000000FF)
+
+            shadow.write(
+                x,
+                y,
+                red / 255.0,
+                green / 255.0,
+                blue / 255.0,
+                1 - alpha / 255.0
+            )
         }
     }
     shadow.upload()
@@ -43,7 +57,8 @@ fun ColorBuffer.write(image: DoubleArray2D) {
                 r = value,
                 g = value,
                 b = value,
-                a = 1.0)
+                a = 1.0
+            )
         }
     }
     shadow.upload()

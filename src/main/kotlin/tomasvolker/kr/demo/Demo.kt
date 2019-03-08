@@ -6,6 +6,8 @@ import org.openrndr.*
 import org.openrndr.color.ColorRGBa
 import org.openrndr.draw.Drawer
 import org.openrndr.draw.colorBuffer
+import org.openrndr.draw.isolated
+import org.openrndr.extensions.Screenshots
 import org.openrndr.math.Vector2
 import tomasvolker.kr.algorithm.QrDetector
 import tomasvolker.kr.algorithm.QrPattern
@@ -21,6 +23,8 @@ import tomasvolker.openrndr.math.extensions.FPSDisplay
 import tomasvolker.openrndr.math.extensions.PanZoom
 import tomasvolker.openrndr.math.primitives.d
 import java.awt.image.BufferedImage
+import java.io.File
+import javax.imageio.ImageIO
 
 fun main() = application(
     configuration = configuration {
@@ -35,17 +39,19 @@ fun main() = application(
 class DemoProgram: Program() {
 
     val webcam = UtilWebcamCapture.openDefault(640, 480)
-    val imageWidth = webcam.viewSize.width
-    val imageHeight = webcam.viewSize.height
+    //val image = ImageIO.read(File("test_image.jpg"))
+    var image: BufferedImage = webcam.image
 
-    val detector = QrDetector(imageWidth, imageHeight)
-
-    val imageBuffer: BufferedImage = BufferedImage(imageWidth, imageHeight, BufferedImage.TYPE_INT_ARGB)
-    val colorBuffer by lazy { colorBuffer(imageWidth, imageHeight) }
-
+    val imageHeight = image.height
+    val imageWidth = image.width
 
     var homography: Homography? = null
-    var image: BufferedImage = webcam.image
+
+    val detector = QrDetector(imageWidth, imageHeight)
+    val imageBuffer: BufferedImage = BufferedImage(imageWidth, imageHeight, BufferedImage.TYPE_INT_ARGB)
+
+
+    val colorBuffer by lazy { colorBuffer(imageWidth, imageHeight) }
 
 
     val localCorners = listOf(
@@ -74,10 +80,14 @@ class DemoProgram: Program() {
 
         backgroundColor = ColorRGBa.WHITE
 
+        extend(Screenshots())
+
         extend(FPSDisplay())
 
         extend(PanZoom())
         extend(CursorPosition())
+
+        //homography = detector.detectQr(image)
 
         extend {
             image = webcam.image
@@ -146,13 +156,15 @@ class DemoProgram: Program() {
 
     fun Drawer.drawHomography(homography: Homography) {
 
-        stroke = ColorRGBa.BLUE
-        strokeWeight = 2.0
+        isolated {
+            stroke = ColorRGBa.BLUE
+            strokeWeight = 2.0
 
-        val corners = localCorners.map(homography)
+            val corners = localCorners.map(homography)
 
-        if (corners.all { !it.x.isNaN() && !it.y.isNaN() })
-            lineLoop(corners)
+            if (corners.all { !it.x.isNaN() && !it.y.isNaN() })
+                lineLoop(corners)
+        }
 
     }
 
@@ -187,6 +199,7 @@ class DemoProgram: Program() {
 
         fontMap = Resources.defaultFont
         fill = ColorRGBa.RED
+        stroke = ColorRGBa.BLACK
 
         detector.clusters.forEach {
             text(
@@ -202,6 +215,7 @@ class DemoProgram: Program() {
 
         fontMap = Resources.defaultFont
         fill = ColorRGBa.RED
+        stroke = ColorRGBa.BLACK
 
         detector.filteredClusters.forEach {
             text(
@@ -216,6 +230,7 @@ class DemoProgram: Program() {
         imageBinary(detector.thresholded)
 
         fill = ColorRGBa.RED
+        stroke = ColorRGBa.BLACK
 
         detector.rawMarkers.forEach {
             it.corners.forEach {
@@ -231,8 +246,20 @@ class DemoProgram: Program() {
     fun Drawer.drawSortedMarkers() {
         imageBinary(detector.thresholded)
 
+        if (detector.sortedCorners.isNotEmpty()) {
+            isolated {
+                strokeWeight = 2.0
+                stroke = ColorRGBa.GREEN
+                lineSegment(detector.sortedCorners[0].position, detector.sortedCorners[1].position)
+                lineSegment(detector.sortedCorners[0].position, detector.sortedCorners[2].position)
+                stroke = ColorRGBa.BLUE
+                lineSegment(detector.sortedCorners[1].position, detector.sortedCorners[2].position)
+            }
+        }
+
         fontMap = Resources.defaultFont
         fill = ColorRGBa.RED
+        stroke = ColorRGBa.BLACK
 
         detector.sortedMarkers.forEachIndexed { i, marker ->
 
@@ -254,8 +281,18 @@ class DemoProgram: Program() {
     fun Drawer.drawSortedCorners() {
         imageBinary(detector.thresholded)
 
+        if (detector.sortedCorners.isNotEmpty()) {
+            isolated {
+                strokeWeight = 2.0
+                stroke = ColorRGBa.GREEN
+                lineSegment(detector.sortedCorners[0].position, detector.sortedCorners[1].position)
+                lineSegment(detector.sortedCorners[0].position, detector.sortedCorners[2].position)
+            }
+        }
+
         fontMap = Resources.defaultFont
         fill = ColorRGBa.RED
+        stroke = ColorRGBa.BLACK
 
         detector.sortedCorners.forEachIndexed { i, marker ->
 

@@ -41,11 +41,3 @@ fun GrayI<*>.mean(): Double = when(this) {
 fun GrayS64.mean(): Double = mean(this)
 fun GrayF32.mean(): Float = mean(this)
 fun GrayF64.mean(): Double = mean(this)
-
-fun GrayF64.histogram() {
-
-
-
-    histogram(this, 0.0, IntArray(10))
-
-}

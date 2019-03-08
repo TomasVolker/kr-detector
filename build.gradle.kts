@@ -43,5 +43,5 @@ dependencies {
     listOf("boofcv-core","boofcv-swing","boofcv-WebcamCapture","demonstrations").forEach { a ->
         compile(group = "org.boofcv", name = a, version = "0.32")
     }
-
+    
 }

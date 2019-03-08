@@ -22,5 +22,5 @@ fun List<Vector2>.average(): Vector2 {
 operator fun Vector2.get(i: Int): Double = when(i) {
     0 -> x
     1 -> y
-    else -> throw IndexOutOfBoundsException(i)
+    else -> throw IndexOutOfBoundsException("$i")
 }

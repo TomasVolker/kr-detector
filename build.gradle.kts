@@ -1,7 +1,7 @@
 import org.gradle.internal.os.OperatingSystem
 
 plugins {
-    java
+    application
     kotlin("jvm") version "1.3.21"
 }
 
@@ -44,4 +44,16 @@ dependencies {
         compile(group = "org.boofcv", name = a, version = "0.32")
     }
     
+}
+
+
+val mainClass = "tomasvolker.kr.demo.DemoKt"
+
+application {
+
+    mainClassName = mainClass
+
+    if (openrndrOS == "macos")
+        applicationDefaultJvmArgs += "-XstartOnFirstThread"
+
 }

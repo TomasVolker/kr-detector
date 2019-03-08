@@ -17,7 +17,7 @@ val Rectangle.rangeList get() = listOf(left..right, top..bottom)
 fun Rectangle.range(i: Int): DoubleRange  = when(i) {
     0 -> left..right
     1 -> top..bottom
-    else -> throw IndexOutOfBoundsException(i)
+    else -> throw IndexOutOfBoundsException("$i")
 }
 
 fun Rectangle.Companion.fromRangeList(

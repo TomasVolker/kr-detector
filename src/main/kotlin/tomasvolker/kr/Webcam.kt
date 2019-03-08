@@ -1,63 +1,90 @@
 package tomasvolker.kr
 
-import boofcv.io.image.ConvertBufferedImage
-import boofcv.gui.image.ShowImages
 import boofcv.io.webcamcapture.UtilWebcamCapture
-import boofcv.alg.fiducial.qrcode.QrCode
-import boofcv.factory.fiducial.FactoryFiducial
-import boofcv.gui.feature.VisualizeShapes
-import boofcv.gui.image.ImagePanel
+import boofcv.struct.image.GrayF32
 import boofcv.struct.image.GrayU8
-import java.awt.BasicStroke
-import java.awt.Color
+import org.openrndr.application
+import org.openrndr.color.ColorRGBa
+import org.openrndr.draw.colorBuffer
+import org.openrndr.math.Vector2
+import tomasvolker.kr.algorithm.*
+import tomasvolker.kr.geometry.Point
+import tomasvolker.kr.openrndr.write
+import tomasvolker.openrndr.math.extensions.CursorPosition
+import tomasvolker.openrndr.math.extensions.FPSDisplay
+import tomasvolker.openrndr.math.extensions.PanZoom
+import kotlin.math.roundToInt
 
 
 fun main() {
 
-    val detector = FactoryFiducial.qrcode(null, GrayU8::class.java)
-
-    // Open a webcam at a resolution close to 640x480
     val webcam = UtilWebcamCapture.openDefault(640, 480)
+    val imageWidth = webcam.viewSize.width
+    val imageHeight = webcam.viewSize.height
 
-    // Create the panel used to display the image and feature tracks
-    val gui = ImagePanel()
-    gui.preferredSize = webcam.viewSize
+    val detector = QrDetector(imageWidth, imageHeight)
 
-    ShowImages.showWindow(gui, "KLT Tracker", true)
+    println("Webcam opened: $imageWidth x $imageHeight")
 
-    while (true) {
-        val image = webcam.image ?: break
-        val gray = ConvertBufferedImage.convertFrom(image, null as GrayU8?)
+    application {
 
-        detector.process(gray)
-
-        // Get's a list of all the qr codes it could successfully detect and decode
-        val detections = detector.detections
-
-        val g2 = image.createGraphics()
-        val strokeWidth = Math.max(4, image.width / 200) // in large images the line can be too thin
-        g2.color = Color.GREEN
-        g2.stroke = BasicStroke(strokeWidth.toFloat())
-        for (qr in detections) {
-            // The message encoded in the marker
-            println("message: " + qr.message);
-
-            // Visualize its location in the image
-            VisualizeShapes.drawPolygon(qr.bounds, true, 1.0, g2);
+        configure {
+            windowResizable = true
         }
 
-        // List of objects it thinks might be a QR Code but failed for various reasons
-        val failures = detector.failures
-        g2.color = Color.RED
-        for(qr in failures) {
-            // If the 'cause' is ERROR_CORRECTION or later then it's probably a real QR Code that
-            if( qr.failureCause.ordinal < QrCode.Failure.ERROR_CORRECTION.ordinal)
-                continue
+        program {
 
-            VisualizeShapes.drawPolygon(qr.bounds, true, 1.0, g2);
+            val buffer = colorBuffer(imageWidth, imageHeight)
+
+            backgroundColor = ColorRGBa.WHITE
+
+            extend(FPSDisplay())
+
+            extend(PanZoom())
+            extend(CursorPosition())
+
+            val localCorners = listOf(
+                Vector2(0.0, 0.0),
+                Vector2(25.0, 0.0),
+                Vector2(25.0, 25.0),
+                Vector2(0.0, 25.0)
+            )
+
+            extend {
+
+                val mousePosition = mouse.position.let {
+                    Point(
+                        it.x.roundToInt(),
+                        it.y.roundToInt()
+                    )
+                }
+
+                val image = webcam.image
+
+                val homography = detector.detectQr(image)
+
+                buffer.write(image)
+                drawer.image(buffer)
+
+                if (homography != null) {
+
+                    drawer.stroke = ColorRGBa.BLUE
+                    drawer.strokeWeight = 2.0
+
+                    val corners = localCorners.map(homography)
+
+                    if (corners.all { !it.x.isNaN() && !it.y.isNaN() })
+                        drawer.lineLoop(corners)
+
+                }
+
+            }
+
         }
 
-        gui.setImageUI(image)
+
     }
+
+    webcam.close()
 
 }
